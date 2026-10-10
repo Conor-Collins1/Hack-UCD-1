@@ -151,6 +151,8 @@ def test_provider_request_uses_server_model_and_data_only(client,monkeypatch):
     assert client.get('/api/summary').json()['status']=='ok'
     args=sdk.chat.completions.create.call_args.kwargs
     assert args['model']=='openrouter/free'
+    assert args['extra_body']['models'][0]=='openrouter/free'
+    assert args['extra_body']['reasoning']=={'enabled':False}
     assert args['response_format']=={'type':'json_object'}
     assert 'UNTRUSTED' in args['messages'][0]['content']
     payload=json.loads(args['messages'][1]['content'])
@@ -185,3 +187,26 @@ def test_incomplete_provider_output_falls_back(client,monkeypatch):
         finish_reason='length',message=SimpleNamespace(content=output()))])
     monkeypatch.setattr(ai,'client',lambda:sdk)
     assert client.get('/api/summary').json()['status']=='error'
+
+
+def test_fallback_models_primary_first_then_fallbacks(monkeypatch):
+    monkeypatch.setenv('OPENROUTER_MODEL','some/primary:free')
+    monkeypatch.setattr(ai,'FALLBACK_MODELS',['a:free','b:free','c:free'])
+    assert ai.models_to_try()==['some/primary:free','a:free','b:free']
+
+
+def test_fallback_models_capped_at_openrouter_limit(monkeypatch):
+    monkeypatch.setattr(ai,'FALLBACK_MODELS',[f'm{i}:free' for i in range(10)])
+    assert len(ai.models_to_try())==ai.MAX_MODELS==3
+
+
+def test_fallback_models_no_duplicate_when_primary_is_a_fallback(monkeypatch):
+    monkeypatch.setenv('OPENROUTER_MODEL','b:free')
+    monkeypatch.setattr(ai,'FALLBACK_MODELS',['a:free','b:free'])
+    assert ai.models_to_try()==['b:free','a:free']
+
+
+def test_fallback_models_blank_setting_uses_default_first(monkeypatch):
+    monkeypatch.setenv('OPENROUTER_MODEL','  ')
+    monkeypatch.setattr(ai,'FALLBACK_MODELS',['a:free'])
+    assert ai.models_to_try()==[ai.DEFAULT_MODEL,'a:free']

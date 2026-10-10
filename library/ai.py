@@ -16,6 +16,11 @@ REGEN_NEW_COMMENTS = 5
 REGEN_MINUTES = 10
 MAX_COMMENTS = 50
 DEFAULT_MODEL = 'openrouter/free'
+# Free models get rate-limited upstream; OpenRouter tries these in order if the first fails.
+# Not openrouter/free here: it can route to code or safety-classifier models that can't summarise.
+FALLBACK_MODELS = ['nvidia/nemotron-3-super-120b-a12b:free', 'google/gemma-4-31b-it:free',
+                   'google/gemma-4-26b-a4b-it:free']
+MAX_MODELS = 3  # OpenRouter rejects a 'models' list longer than this
 summary_lock = threading.Lock()
 _retry_after = 0.0
 logger = logging.getLogger(__name__)
@@ -44,6 +49,11 @@ def client():
 
 def model_name():
     return os.environ.get('OPENROUTER_MODEL', '').strip() or DEFAULT_MODEL
+
+
+def models_to_try():
+    """model_name() first, then the fallbacks, without duplicates (at most MAX_MODELS)."""
+    return list(dict.fromkeys([model_name(), *FALLBACK_MODELS]))[:MAX_MODELS]
 
 
 def recent_comments(conn):
@@ -121,7 +131,9 @@ def generate(rows):
         result=sdk.chat.completions.create(
             model=model_name(), messages=[{'role':'system','content':SYSTEM_PROMPT},
                                          {'role':'user','content':json.dumps(payload,ensure_ascii=False)}],
-            response_format={'type':'json_object'}, max_tokens=800, temperature=0.2)
+            response_format={'type':'json_object'}, max_tokens=800, temperature=0.2,
+            # Reasoning models (e.g. Nemotron) otherwise spend all max_tokens thinking and return nothing.
+            extra_body={'models':models_to_try(),'reasoning':{'enabled':False}})
     if not result.choices or result.choices[0].finish_reason != 'stop':
         raise ValueError('Incomplete AI response')
     return result.choices[0].message.content
