@@ -1,36 +1,121 @@
 {% extends "base.html" %}
+{% block title %}Is the library full? · Library Status{% endblock %}
 {% block content %}
-<div class="eyebrow">Less wandering. More studying.</div><h1>Find your space.<br>Before you walk.</h1><p class="intro">Student reports help you check the crowd before heading to the library. <a href="/account">Sign in to share an update.</a></p>
-<section class="card">
-  <h1>Is the library full?</h1>
-  <p id="status-label" class="status" role="status" aria-live="polite">Loading…</p>
-  <p id="status-meta" class="muted"></p>
-</section>
+<p class="visually-hidden" id="announcer" role="status" aria-live="polite"></p>
+<div class="page-header">
+  <h1 class="headline">Is the UCD library full?</h1>
+  <p class="supporting">Live estimate from student reports in the last 45 minutes.</p>
+</div>
 
-<section class="card">
-  <h2>What's it like right now?</h2>
-  <div class="buttons">
-    <button data-level="not_full">Not full</button>
-    <button data-level="busy">~80% full</button>
-    <button data-level="full">Full</button>
+<div class="layout">
+  <div class="layout__main">
+
+    <!-- Current status -->
+    <section class="card status" id="status-card" data-level="unknown" aria-labelledby="status-heading" aria-busy="true">
+      <h2 id="status-heading" class="overline">Right now</h2>
+      <div class="status__row">
+        <span class="status__icon" aria-hidden="true"></span>
+        <p class="status__label" id="status-label">Loading…</p>
+      </div>
+      <p class="status__desc" id="status-desc"></p>
+
+      <ol class="scale" aria-label="Occupancy scale">
+        <li data-step="not_full">Not full</li>
+        <li data-step="busy">~80% full</li>
+        <li data-step="full">Full</li>
+      </ol>
+
+      <dl class="facts">
+        <div><dt>Reports</dt><dd id="status-count">–</dd></div>
+        <div><dt>Confidence</dt><dd id="status-confidence">–</dd></div>
+        <div><dt>Trend</dt><dd id="status-trend">–</dd></div>
+      </dl>
+      <p class="caption" id="status-updated"></p>
+    </section>
+
+    <!-- Report -->
+    <section class="card" id="report-card" aria-labelledby="report-heading">
+      <h2 id="report-heading" class="title">How full is it where you are?</h2>
+
+      <div id="report-signed-out" hidden>
+        <p class="body-muted">Sign in once so we can weigh reports by how reliable each reporter is. We only show your first name.</p>
+        <form class="form" id="report-login-form" novalidate>
+          <div class="field">
+            <label for="login-name">First name</label>
+            <input id="login-name" name="name" autocomplete="given-name" maxlength="60" required>
+          </div>
+          <div class="field">
+            <label for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" maxlength="200" required>
+          </div>
+          <button class="btn btn--primary" type="submit">Sign in to report</button>
+          <p class="form-error" id="login-error" role="alert"></p>
+        </form>
+      </div>
+
+      <div id="report-signed-in" hidden>
+        <p class="body-muted">Reporting as <strong id="reporter-name"></strong>. Tap the option that matches what you see.</p>
+        <div class="report-options" role="group" aria-labelledby="report-heading">
+          <button class="report-option" type="button" data-level="not_full">
+            <span class="report-option__swatch" aria-hidden="true"></span>
+            <span class="report-option__text">
+              <span class="report-option__label">Not full</span>
+              <span class="report-option__hint">Easy to find a seat</span>
+            </span>
+          </button>
+          <button class="report-option" type="button" data-level="busy">
+            <span class="report-option__swatch" aria-hidden="true"></span>
+            <span class="report-option__text">
+              <span class="report-option__label">~80% full</span>
+              <span class="report-option__hint">Seats are getting hard to find</span>
+            </span>
+          </button>
+          <button class="report-option" type="button" data-level="full">
+            <span class="report-option__swatch" aria-hidden="true"></span>
+            <span class="report-option__text">
+              <span class="report-option__label">Full</span>
+              <span class="report-option__hint">No free seats</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      <p class="notice" id="report-msg" hidden></p>
+    </section>
   </div>
-  <p id="report-msg" role="status" aria-live="polite"></p>
-</section>
 
-<section class="card">
-  <h2>What people are saying</h2>
-  <p id="summary" class="muted">Loading…</p>
-  <ul id="themes" class="chips"></ul>
-</section>
+  <div class="layout__side">
+    <!-- AI summary -->
+    <section class="card" aria-labelledby="summary-heading" id="summary-card">
+      <div class="card__header">
+        <h2 id="summary-heading" class="title">What students are saying</h2>
+        <span class="tag">AI summary</span>
+      </div>
+      <p class="body" id="summary">Loading…</p>
+      <ul class="chips" id="themes" aria-label="Common themes"></ul>
+      <p class="caption" id="summary-meta"></p>
+    </section>
 
-<section class="card">
-  <h2>Comments</h2>
-  <form id="comment-form">
-    <input id="comment" maxlength="280" required placeholder="e.g. Plenty of seats on floor 2">
-    <button type="submit">Post</button>
-  </form>
-  <p id="comment-msg" role="status" aria-live="polite"></p>
-  <ul id="comments"></ul>
-</section>
+    <!-- Comments -->
+    <section class="card" aria-labelledby="comments-heading">
+      <h2 id="comments-heading" class="title">Comments</h2>
+      <form class="form" id="comment-form" novalidate hidden>
+        <div class="field">
+          <label for="comment">Add a comment</label>
+          <textarea id="comment" rows="3" maxlength="280" required aria-describedby="comment-help comment-count"
+            placeholder="e.g. Plenty of seats on level 2"></textarea>
+          <div class="field__help">
+            <span id="comment-help">Visible to everyone. Don't share personal details.</span>
+            <span id="comment-count" aria-live="polite">0/280</span>
+          </div>
+        </div>
+        <button class="btn btn--secondary" type="submit">Post comment</button>
+        <p class="form-error" id="comment-error" role="alert"></p>
+      </form>
+      <p class="body-muted" id="comment-signed-out" hidden><a href="#report-heading">Sign in</a> to add a comment.</p>
+      <ul class="comment-list" id="comments" aria-live="off"></ul>
+      <p class="empty" id="comments-empty" hidden>No comments yet. Say what you're seeing.</p>
+    </section>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}<script>initStatusPage();</script>{% endblock %}

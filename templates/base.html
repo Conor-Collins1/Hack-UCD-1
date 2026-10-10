@@ -3,19 +3,33 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#ffffff">
     <title>{% block title %}Library Status{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
   </head>
   <body>
-    <nav>
-      <a href="/">Status</a>
-      <a href="/leaderboard">Leaderboard</a>
-      <a href="/premium">Premium</a>
-      <a href="/account">Account</a>
-    </nav>
-    <main>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="app-bar">
+      <div class="app-bar__inner">
+        <a class="brand" href="/">
+          Library Status
+        </a>
+        {% set path = request.url.path %}
+        <nav class="nav" aria-label="Main">
+          <a href="/" {% if path == '/' %}aria-current="page"{% endif %}>Status</a>
+          <a href="/leaderboard" {% if path == '/leaderboard' %}aria-current="page"{% endif %}>Leaderboard</a>
+          <a href="/premium" {% if path == '/premium' %}aria-current="page"{% endif %}>Premium</a>
+          <a href="/account" {% if path == '/account' %}aria-current="page"{% endif %}>Account</a>
+        </nav>
+      </div>
+    </header>
+    <main id="main" class="page" tabindex="-1">
       {% block content %}{% endblock %}
     </main>
+    <footer class="footer">
+      <p>Live status is estimated from student reports and may be wrong. Built at HackUCD 2026.</p>
+    </footer>
     <script src="{{ url_for('static', path='/app.js') }}"></script>
     {% block scripts %}{% endblock %}
   </body>
