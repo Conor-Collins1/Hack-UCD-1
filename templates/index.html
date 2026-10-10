@@ -102,7 +102,7 @@
       <form class="form" id="comment-form" novalidate hidden>
         <div class="field">
           <label for="comment">Add a comment</label>
-          <textarea id="comment" rows="3" maxlength="280" required aria-describedby="comment-help comment-count"
+          <textarea id="comment" rows="3" maxlength="280" required aria-describedby="comment-help comment-count comment-ai-note"
             placeholder="e.g. Plenty of seats on level 2"></textarea>
           <div class="field__help">
             <span id="comment-help">Visible to everyone. Don't share personal details.</span>
@@ -110,6 +110,7 @@
           </div>
         </div>
         <button class="btn btn--secondary" type="submit">Post comment</button>
+        <p class="caption" id="comment-ai-note">Comments may be processed by AI to summarise library conditions. Please leave out personal information.</p>
         <p class="form-error" id="comment-error" role="alert"></p>
       </form>
       <p class="body-muted" id="comment-signed-out" hidden><a href="#report-heading">Sign in</a> to add a comment.</p>

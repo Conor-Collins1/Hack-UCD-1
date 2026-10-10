@@ -10,7 +10,7 @@ A web app where students tap one button to report whether the library is **Not f
 
 FastAPI routes, signed demo login, database tables, occupancy calculation (time decay, trust weights,
 hysteresis and trend), report cooldown, comments, pages and PostgreSQL configuration are implemented.
-Trust judgement, automatic leaderboard rewards, AI summaries and payments remain team TODOs. Participation points and live ranks are implemented. Notifications are deferred as a future idea.
+Trust judgement, automatic leaderboard rewards and payments remain team TODOs. Participation points, live ranks and OpenRouter AI summaries are implemented. Notifications are deferred as a future idea.
 The integration routes return placeholders or explicit unavailable errors until Person 3 implements them.
 Name/email login does not verify email ownership: use synthetic data until verified authentication is added.
 The prior anonymous prototype database is separate and is not migrated; the app now uses the team's schema.
@@ -114,11 +114,21 @@ python scripts/replay.py            # third terminal
 Notifications may eventually warn students when the library fills or space opens. They are outside the current demo and require no setup or keys.
 
 ### AI summary (OpenRouter)
-- Send comments from the last 2 hours; ask for JSON: a one-line summary plus 3–5 theme tags, each with sentiment and count.
-- Cache; only regenerate after 5 new comments or 10 minutes.
-- Fewer than 3 comments: show "Not enough recent comments" and skip the API call.
-- If the JSON doesn't parse, keep the last good summary.
-- The same call filters out abusive or spam comments.
+- Reads up to 50 latest visible comments from the past two hours. Names and emails are not sent;
+  comment text is sent to OpenRouter, so students should avoid personal details in comments.
+- Fewer than three comments: returns `not_enough` and makes no API call.
+- Uses OPENROUTER_API_KEY in Render; OPENROUTER_MODEL selects the model. If blank or unset,
+  defaults to `openrouter/free` (https://openrouter.ai/openrouter/free), subject to provider limits.
+- Validates a one-sentence summary and up to five theme tags with sentiment and mention counts.
+  Treats comment instructions as untrusted data; identified spam/abuse can be hidden, while normal
+  criticism remains visible. Model moderation and summaries can still make mistakes.
+- Saves summaries in PostgreSQL/SQLite. Reuses them until five new comments arrive, ten minutes
+  pass, the model changes, or source comments expire/disappear from the bounded input window.
+- A 15-second request timeout and one-minute retry cooldown limit failed calls. Invalid JSON,
+  incomplete output, missing credentials, provider errors and timeouts keep the last valid,
+  still-relevant summary with `stale`, or return `error` when none exists.
+- Concurrent requests share one generation per app process; use one Uvicorn worker for this demo.
+  No background job or browser-side API key is required. The page already polls every 30 seconds.
 
 ### Leaderboard
 - +5 points for each accepted occupancy report; one report every 10 minutes.
