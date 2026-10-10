@@ -125,6 +125,19 @@ templates/static. Forecast = typical (weekday, 15-min slot) score from recency-w
 Same level thresholds as status (busy >= 0.5, full > 0.9). No new tables or dependencies; history
 never goes into `reports`. Assumed hours Mon-Fri 08-22, Sat-Sun 10-18 Europe/Dublin.
 
+## Recency-first occupancy (Person 1 request)
+
+Person 1 requested faster response to fresh reports and removal of older votes when enough fresh
+people contribute. Keep the latest report per non-flagged positive-trust user within 45 minutes.
+Weights halve every 3 minutes, multiplied by trust. At least 3 distinct reporters in the past
+5 minutes establishes a cutoff at the oldest of that group's 5 newest distinct reports. Use at most
+the 5 newest independent reports from that cutoff onward. Reconstruct the latest qualifying group
+from stored timestamps so discarded older votes never re-enter just because fresh votes age.
+Bypass previous-Full hysteresis while at least 3 selected votes are currently within 5 minutes.
+Without any qualifying group, retain the 45-minute sparse fallback. Sparse Full enter >0.9 / exit <0.8. Fresh confidence: 3-4 medium, 5 high; sparse
+fallback low. report_count counts the selected independent reports. Shared Status shape unchanged.
+Forecast and simulated alerts consume the revised live calculation; no history or reports are deleted.
+
 ## Stack
 
 FastAPI + Uvicorn + SQLAlchemy Core (no ORM) · SQLite locally, hosted Postgres via `DATABASE_URL` on

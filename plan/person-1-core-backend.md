@@ -1,3 +1,5 @@
+> Occupancy recency updated: latest vote per person, 3-minute weight half-life, and a fresh group of 3 distinct people within 5 minutes replaces older votes using up to the latest 5 reports. The older 15-minute decay tasks below are superseded.
+
 > Participation scoring now implemented: +5 per report, +2 per comment; live leaderboard and personal rank. Trust judgement and premium rewards remain separate future work. Old agreement-based bonus tasks below are superseded.
 
 > Updated scope: keep demo login and the sandbox payments page. Notifications are a future idea only; notification tasks below are deferred.
