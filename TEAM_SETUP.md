@@ -37,7 +37,7 @@ through Render's GitHub integration and reads secrets from Render, not from GitH
 | OPENROUTER_API_KEY | AI comment summaries | Render Environment / ignored local .env |
 | OPENROUTER_MODEL | Model identifier; defaults to openrouter/free if unset | Same settings |
 | STRIPE_SECRET_KEY | Stripe sandbox server key starting sk_test_ | Render Environment / ignored local .env |
-| STRIPE_PRICE_ID | Recurring sandbox price identifier starting price_ | Same settings; not a secret credential |
+| STRIPE_PRICE_ID | One-time EUR 1.99 sandbox price identifier starting price_ | Same settings; not a secret credential |
 | STRIPE_WEBHOOK_SECRET | Signature secret for this deployment's webhook endpoint | Render Environment / ignored local .env |
 
 No Stripe publishable key is required for the planned server-created hosted Checkout flow.

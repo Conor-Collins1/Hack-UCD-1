@@ -62,6 +62,16 @@ Old sentence-format caches are invalidated. Theme metadata is retained in the AP
 Keep one worker for the demo. No new schema or dependencies. generated_at is null when no summary exists.
 Comments are untrusted and model moderation is fallible; never expose credentials in responses/logs.
 
+## One-time Stripe demo (Person 1 request)
+
+Person 1 requested checkout implementation across payment routes, UI, tests and docs.
+Premium costs EUR 1.99 once, using an active sandbox one-time Price. Verified paid payment-mode
+Checkout sessions grant permanent Premium (is_premium=true, premium_until=null, source=stripe).
+Both signed webhooks and authenticated return confirmation use the same idempotent transaction;
+check account ownership, sandbox status, product purpose and actual line-item price before granting.
+Never accept live keys/events. Existing endpoint shapes and tables stay unchanged. days=None in
+ grant_premium means permanent; timed leaderboard rewards must preserve permanent access.
+
 ## Stack
 
 FastAPI + Uvicorn + SQLAlchemy Core (no ORM) · SQLite locally, hosted Postgres via `DATABASE_URL` on
