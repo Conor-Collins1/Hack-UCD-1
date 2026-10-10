@@ -122,8 +122,8 @@ main:focus { outline: none; }
 
 /* ---- Card ---- */
 .card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: var(--s3) var(--s2); margin: 0 0 var(--s2); min-width: 0; box-shadow: var(--shadow);
+  background: var(--sand); border: 1px solid var(--sand-line); border-radius: var(--radius);
+  padding: var(--s3) var(--s2); margin: 0 0 var(--s2); min-width: 0;
 }
 .layout .card { margin: 0; }
 @media (min-width: 600px) { .card { padding: var(--s3); } }
@@ -132,14 +132,26 @@ main:focus { outline: none; }
 
 .tag {
   flex: none; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--text-muted);
-  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--half) var(--s1);
+  border: 1px solid var(--sand-line); border-radius: var(--radius-sm); padding: var(--half) var(--s1);
 }
+
+/* Dark card (AI summary): same espresso as the leaderboard band. */
+.card--dark { background: var(--espresso); border-color: var(--espresso); color: var(--espresso-text); }
+.card--dark .title { color: var(--espresso-text); }
+.card--dark .tag { color: var(--espresso-muted); border-color: rgba(203, 191, 174, .45); }
+.card--dark .caption { color: var(--espresso-muted); }
+.card--dark .chips li { background: rgba(255, 253, 250, .06); border-color: var(--border-strong); color: var(--espresso-text); }
+.card--dark .chips li::before { background: #a59d93; }
+.card--dark .chips li[data-sentiment="positive"]::before { background: #62c18a; }
+.card--dark .chips li[data-sentiment="negative"]::before { background: #f07d70; }
+.card--dark .chips .chip__count { color: var(--espresso-muted); }
 
 /* ---- Status card ---- */
 .status {
   --c: var(--none); --c-bg: var(--none-bg); --c-text: var(--none-text);
   --fade: 1200ms ease-in-out;   /* how slowly colours change when the level changes */
-  border-top: 4px solid var(--c); transition: border-color var(--fade);
+  background: var(--c-bg); border-top: 4px solid var(--c);
+  transition: border-color var(--fade), background-color var(--fade);
 }
 .status[data-level="not_full"] { --c: var(--ok);   --c-bg: var(--ok-bg);   --c-text: var(--ok-text); }
 .status[data-level="busy"]     { --c: var(--busy); --c-bg: var(--busy-bg); --c-text: var(--busy-text); }
@@ -148,8 +160,8 @@ main:focus { outline: none; }
 .status__row { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s1); }
 .status__icon {
   flex: none; width: var(--s6); height: var(--s6); border-radius: var(--radius);
-  background: var(--c-bg); color: var(--c); display: grid; place-items: center;
-  transition: background-color var(--fade), color var(--fade);
+  background: var(--surface); color: var(--c); display: grid; place-items: center;
+  transition: color var(--fade);
 }
 /* Shape differs per level so it's not colour alone (1.4.1). */
 .status__icon::before { content: ""; width: 20px; height: 20px; background: currentColor; border-radius: 50%; }
@@ -186,7 +198,7 @@ main:focus { outline: none; }
 
 .facts {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2);
-  margin: 0 0 var(--s2); padding: var(--s2) 0 0; border-top: 1px solid var(--border);
+  margin: 0 0 var(--s2); padding: var(--s2) 0 0; border-top: 1px solid rgba(43, 38, 33, .12);
 }
 .facts dt { font-size: 12px; line-height: 16px; color: var(--text-muted); }
 .facts dd { margin: var(--half) 0 0; font-size: 16px; line-height: 24px; font-weight: 600; }
@@ -250,14 +262,14 @@ main:focus { outline: none; }
 }
 
 /* (5) Cooldown bar: shrinks over the remaining wait; duration is set from JS. */
-.cooldown { height: 4px; margin-top: var(--s2); border-radius: 2px; background: var(--border); overflow: hidden; }
+.cooldown { height: 4px; margin-top: var(--s2); border-radius: 2px; background: var(--sand-line); overflow: hidden; }
 .cooldown__bar { height: 100%; background: var(--ink); transform-origin: left; animation: cooldown var(--duration, 60s) linear forwards; }
 @keyframes cooldown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* ---- Notices ---- */
 .notice {
   margin: var(--s2) 0 0; padding: var(--s1) var(--s2); border-radius: var(--radius-sm);
-  font-size: 14px; line-height: 20px; background: var(--surface-alt); border-left: 4px solid var(--border-strong);
+  font-size: 14px; line-height: 20px; background: var(--surface); border-left: 4px solid var(--border-strong);
 }
 .notice[data-tone="success"] { background: var(--ok-bg); border-left-color: var(--ok); color: var(--ok-text); }
 .notice[data-tone="warning"] { background: var(--busy-bg); border-left-color: var(--busy); color: var(--busy-text); }
@@ -309,13 +321,13 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 
 /* ---- Comments ---- */
 .comment-list { list-style: none; margin: var(--s3) 0 0; padding: 0; }
-.comment-list li { padding: var(--s2) 0; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.comment-list li { padding: var(--s2) 0; border-top: 1px solid var(--sand-line); overflow-wrap: anywhere; }
 .comment-list li:last-child { padding-bottom: 0; }
 .comment__meta { display: flex; gap: var(--s1); font-size: 12px; line-height: 16px; color: var(--text-muted); margin-bottom: var(--half); }
 .comment__name { font-weight: 600; color: var(--text); }
 .comment__text { margin: 0; }
 .empty { margin: var(--s3) 0 0; padding: var(--s3) var(--s2); text-align: center; color: var(--text-muted); font-size: 14px; line-height: 20px;
-  border: 1px dashed var(--border); border-radius: var(--radius); }
+  border: 1px dashed var(--border-strong); border-radius: var(--radius); }
 
 /* ---- Loading skeleton (respects reduced motion) ---- */
 [aria-busy="true"] .status__label { color: var(--text-muted); }

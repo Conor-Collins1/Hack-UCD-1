@@ -159,3 +159,16 @@ def test_leaderboard_sample_data_is_only_for_preview():
 def test_leaderboard_api_still_matches_contract(client):
     data = client.get('/api/leaderboard').json()
     assert isinstance(data['leaderboard'], list)
+
+
+def test_status_box_is_tinted_by_level():
+    from pathlib import Path
+    css = Path(__file__).resolve().parent.parent.joinpath('static', 'style.css').read_text(encoding='utf-8')
+    assert re.search(r'\.status \{[^}]*background: var\(--c-bg\)', css)
+    assert 'background-color var(--fade)' in css  # tint fades between levels
+    for level, token in (('not_full', 'ok'), ('busy', 'busy'), ('full', 'full')):
+        assert f'.status[data-level="{level}"]' in css and f'--c-bg: var(--{token}-bg)' in css
+
+
+def test_summary_card_uses_dark_palette(client):
+    assert 'class="card card--dark"' in client.get('/').text
