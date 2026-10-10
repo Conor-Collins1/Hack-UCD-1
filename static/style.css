@@ -561,3 +561,5 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .notification-history time { display: block; margin-bottom: var(--s2); }
 .notification-history p:last-child { margin-bottom: 0; }
 @media (min-width: 600px) { .premium-alerts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.status-method { margin-top: var(--s1); }

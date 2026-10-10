@@ -121,7 +121,7 @@ def test_status_decay_exclusion_and_hysteresis(client, monkeypatch):
             {'user_id':two,'level':'not_full','created_at':fixed},
         ])
         result=status.compute_status(conn)
-        assert result['score'] == pytest.approx(1/3,abs=.0001)
+        assert result['score'] == pytest.approx(1/33,abs=.0001)
         conn.execute(db.reports.delete())
         conn.execute(insert(db.reports).values(user_id=one,level='busy',created_at=fixed))
         conn.execute(insert(db.status_snapshots).values(level='full',score=1,report_count=1,created_at=fixed-timedelta(minutes=1)))

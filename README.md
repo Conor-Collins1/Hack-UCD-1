@@ -100,8 +100,10 @@ python scripts/replay.py            # third terminal
 
 ### Status calculation
 - Each report becomes a number: Not full = 0, 80% = 0.8, Full = 1.
-- Average reports from the last 45 minutes. Each report's weight halves every 15 minutes and is multiplied by the reporter's trust score.
-- Hysteresis to stop flicker: switch to Full above 0.9, back down below 0.8.
+- Use each person's latest report, excluding flagged or zero-trust accounts. Reports can remain as a sparse fallback for up to 45 minutes, but their weight halves every 3 minutes and is multiplied by trust.
+- Once 3 different people report within 5 minutes, use only the 5 newest reports from that period. All older reports stop counting; stored reports are preserved. The last qualifying group's cutoff remains in force as those reports age, preventing old votes from reappearing.
+- With sparse reports, keep hysteresis: switch to Full above 0.9, back down below 0.8. A fresh group of at least 3 reporters overrides that previous state, so old Full snapshots cannot hold the label up.
+- Confidence is medium for 3-4 fresh selected reports, high for 5, and low for sparse fallback data.
 - Confidence label from how many reports came in recently.
 
 ### Bad-actor detection
