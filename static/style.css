@@ -509,5 +509,19 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .panel--you .notice { background: rgba(255,253,250,.12); color: var(--surface); border-color: var(--ribbon); }
 
 /* Keep discussions contained while leaving the comment form visible. */
-#comments { max-height: 24rem; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding-right: var(--s1); }
+#comments { max-height: 12rem; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding-right: var(--s1); }
 #comments:empty { padding-right: 0; }
+
+/* Compact comments, aligned to the reporting card on wider screens. */
+.comments-card #comment { min-height: 64px; max-height: 96px; }
+.comments-card .form { gap: var(--s1); }
+.comments-card .comment-list { margin-top: var(--s2); }
+@media (min-width: 840px) {
+  .layout__main, .layout__side { display: contents; }
+  #status-card { grid-column: 1; grid-row: 1; }
+  #summary-card { grid-column: 2; grid-row: 1; }
+  #report-card { grid-column: 1; grid-row: 2; }
+  .comments-card { grid-column: 2; grid-row: 2; contain: size; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+  .comments-card > :not(#comments) { flex: none; }
+  .comments-card #comments { flex: 1 1 auto; min-height: 0; max-height: none; }
+}
