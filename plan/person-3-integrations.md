@@ -1,3 +1,5 @@
+> Stripe checkout is now implemented: EUR 1.99 once, permanent Premium, signed webhooks and authenticated confirmation. Subscription tasks below are superseded.
+
 > Summary update: display only 1-5 bullet points, using comments from the past hour. Older prose caches are invalidated.
 
 > AI summary implementation is complete: cached, bounded input, validated JSON, moderation IDs, timeout/backoff, and stale fallback. Stripe remains future work.

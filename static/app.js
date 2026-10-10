@@ -363,14 +363,38 @@ async function initLeaderboardPage() {
 
 // ---- Premium page ----
 
-function initPremiumPage() {
-  $('subscribe').addEventListener('click', async () => {
-    $('premium-msg').textContent = 'Opening checkout…';
+async function initPremiumPage() {
+  const button = $('subscribe');
+  const message = $('premium-msg');
+  const params = new URLSearchParams(window.location.search);
+  button.disabled = true;
+  try {
+    let user;
+    if (params.has('session_id')) {
+      message.textContent = 'Checking your payment…';
+      user = (await api('/api/checkout/confirm?session_id=' + encodeURIComponent(params.get('session_id')))).user;
+      history.replaceState(null, '', '/premium');
+    } else {
+      user = (await api('/api/me')).user;
+    }
+    const active = user.is_premium && (!user.premium_until || new Date(user.premium_until) > new Date());
+    button.disabled = active;
+    button.textContent = active ? 'Premium active' : 'Unlock Premium · €1.99';
+    message.textContent = active ? 'Your account has Premium. Thank you!' :
+      (params.has('cancelled') ? 'Checkout cancelled. You can try again whenever you like.' : 'One payment unlocks Premium permanently.');
+  } catch (e) {
+    message.textContent = e.status === 401 ? 'Log in on the Account page first, then return here.' : e.message;
+    button.disabled = params.has('session_id') || e.status !== 401;
+  }
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    message.textContent = 'Opening sandbox checkout…';
     try {
       const data = await api('/api/checkout', { method: 'POST' });
       window.location = data.url;
     } catch (e) {
-      $('premium-msg').textContent = e.status === 401 ? 'Log in on the Account page first.' : e.message;
+      message.textContent = e.status === 401 ? 'Log in on the Account page first.' : e.message;
+      button.disabled = false;
     }
   });
 }

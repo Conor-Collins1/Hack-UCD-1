@@ -24,7 +24,7 @@ The prior anonymous prototype database is separate and is not migrated; the app 
 | AI summary | OpenRouter turns recent comments into a brief bullet points from comments in the past hour |
 | Bad-actor detection | Trust score per user; repeat false reporters get flagged and their reports stop counting |
 | Leaderboard | Points for useful reports; top 3 each month get a free month of premium |
-| Premium subscription | Stripe sandbox Checkout; payment records demo premium status |
+| One-time Premium purchase | Stripe sandbox Checkout; payment records demo premium status |
 
 ---
 
@@ -144,9 +144,9 @@ Notifications may eventually warn students when the library fills or space opens
   Monthly reset and top-three premium rewards are future ideas, not active behavior.
 
 ### Stripe (bonus +5 points)
-- Sandbox Checkout Session for a subscription, e.g. €1.99/month.
+- Sandbox Checkout Session for a one-time EUR 1.99 purchase (mode=payment).
 - Webhook on `checkout.session.completed` sets `is_premium`; `/api/checkout/confirm` is a backup that asks Stripe directly.
-- Account page shows the subscription as active.
+- Account page shows permanent Premium (premium_until is null).
 - Test card: `4242 4242 4242 4242`, any future expiry, any CVC.
 
 ---
@@ -231,3 +231,19 @@ Pull often, commit small, and don't commit `.env`.
 ## Shared setup and credentials
 
 See [TEAM_SETUP.md](TEAM_SETUP.md) for teammate onboarding, which settings are public, and where each private credential belongs. The database schema and setup are in this repo; the hosted database itself is not stored in GitHub.
+
+### Connect the sandbox purchase
+
+In the same Stripe sandbox, create an active EUR 1.99 **one-time** Price. Set
+`STRIPE_SECRET_KEY=sk_test_...`, `STRIPE_PRICE_ID=price_...` and the existing HTTPS `PUBLIC_URL`
+in Render Environment; never commit credentials. No publishable key is needed.
+
+Add a Stripe webhook destination at `https://hack-ucd-library.onrender.com/webhooks/stripe`
+for `checkout.session.completed` and `checkout.session.async_payment_succeeded`. Put its signing
+secret in Render as `STRIPE_WEBHOOK_SECRET=whsec_...`, then redeploy. The return page also verifies
+payment directly with Stripe, so it can confirm purchases before webhook setup is finished.
+
+Log in with a demo identity, open Premium and use sandbox card `4242 4242 4242 4242`, any future
+expiry and any three-digit CVC. Completing payment upgrades that account permanently; cancellations
+and unpaid sessions do not. Reload Account to see Premium. Replaying confirmation or webhook
+creates no duplicate payment rows. This remains a sandbox demo with unverified name/email login.
