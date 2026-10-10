@@ -480,8 +480,9 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .rules li { display: grid; grid-template-columns: var(--s6) 1fr; gap: var(--s2); align-items: start; font-size: 14px; line-height: 20px; }
 .rules__pts {
   display: grid; place-items: center; height: var(--s4); border-radius: var(--radius-sm);
-  background: var(--espresso); color: var(--brass-text); font-weight: 600; font-size: 16px;
+  background: var(--oak); color: var(--surface); font-weight: 600; font-size: 16px;   /* 7.3:1 */
 }
+.rules__pts--bonus { background: var(--spine-1); }   /* brass, like 1st place: 6.2:1 */
 .rules__pts--zero { background: var(--sand-line); color: var(--text); }
 
 /* ---- Generic lists used by premium/account until they get their own pass ---- */
