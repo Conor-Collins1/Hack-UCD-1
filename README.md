@@ -151,43 +151,42 @@ Notifications may eventually warn students when the library fills or space opens
 
 ---
 
-## The 5-hour plan
+## Error handling
 
-Details and checklists: [`plan/person-1-core-backend.md`](plan/person-1-core-backend.md),
-[`plan/person-2-frontend-users.md`](plan/person-2-frontend-users.md),
-[`plan/person-3-integrations.md`](plan/person-3-integrations.md).
+Every error is returned as JSON, `{"error": "<plain-English message>"}`, with a matching HTTP status,
+and the frontend shows that message next to the action that failed.
 
-| Time | Person 1: core backend | Person 2: frontend, users, pitch | Person 3: AI, Stripe |
-|---|---|---|---|
-| 0:00–0:20 | **All:** clone, run tests, read `CLAUDE.md`, agree any contract changes, get API keys | | |
-| 0:20–1:30 | Status calculation (weighting, hysteresis, confidence, trend) | Status page, report buttons, summary bullets, comments; send out survey | OpenRouter summary: prompt, JSON validation, caching, fallbacks |
-| 1:30–2:45 | Trust scores, flags, leaderboard, top-3 reward; realistic `replay.py` | Leaderboard, premium and account pages; collect survey evidence | Stripe Checkout + webhook + confirm fallback |
-| 2:45–3:30 | **All:** reset DB, run the replay, fix what breaks. **Feature freeze at 3:30.** | | |
-| 3:30–4:15 | Tests: no reports, boundaries, spammer, sudden jump | Mobile layout, loading/empty/error states; survey slide | AI limit tests (empty, junk, prompt injection); full payment run |
-| 4:15–5:00 | **All:** slides, demo script, two run-throughs, backup screen recording | | |
+| Situation | Response |
+|---|---|
+| Broken JSON or wrong body shape | `400` "Please check your input and try again." |
+| Invalid report level | `400` "level must be one of not_full, busy, full." |
+| Comment empty or over 280 characters | `400` "Comments must be 1-280 characters." |
+| Not logged in | `401` "Log in first." The page prompts the student to sign in again |
+| Form posted from another website | `403` "Please submit from the app website." |
+| Same comment posted twice within 2 hours | `409` "You already posted this update." |
+| Request body over 64 KB | `413` "Request is too large." |
+| Reporting again within 10 minutes / commenting within 1 minute | `429` with `retry_after_seconds`; the page shows a countdown |
+| Database unavailable | `503` "Database unavailable. Please try again later." (details logged, not shown) |
+| Unknown page / wrong HTTP method | `404` / `405` as JSON |
 
-**If behind:** cut the +3 first-reporter bonus, then the Stripe webhook (keep the confirm fallback). Notifications are already out of scope.
-**Never cut:** the OpenRouter feature, the full Stripe purchase flow, the replay script.
+**AI summary.** Fewer than 3 comments returns `not_enough` without calling the AI. Requests time
+out after 15 seconds and fall back to up to three models. Every field of the AI's reply is
+validated; if the call fails or the reply is invalid, the last good summary is shown marked
+"may be out of date" (`stale`), or `error` if there is none, and the app waits a minute before
+trying again. Comments are passed as untrusted data so instructions inside them are ignored.
 
-### Demo story (~3 min)
-1. A student checks the status.
-2. `replay.py` runs a busy day; the status climbs.
-3. A student signs in with the name/email demo login.
-4. A spammer gets flagged and the status doesn't move.
-5. The AI summary updates as comments arrive.
-6. Leaderboard.
-7. Buy premium live with the Stripe test card.
+**Payments.** Only Stripe sandbox keys are accepted. Before granting Premium the app checks the
+session belongs to the logged-in user, is paid, and matches the EUR 1.99 price. Webhooks must
+have a valid signature, and confirming the same payment twice does not create a duplicate.
+If Stripe is unreachable the student sees "Stripe is unavailable. Please try again shortly." (`502`).
+
+**Startup checks.** In production the app refuses to start without a strong `SESSION_SECRET`
+and an HTTPS `PUBLIC_URL`, or with demo mode switched on.
+
+**Tests.** `pytest` covers ordinary, boundary (e.g. 280 vs 281 characters) and failure inputs
+for the API, scoring, AI summary and payments.
 
 ---
-
-## Judging checklist
-
-- [ ] **Users first:** survey results, quotes, current workaround (walking over / asking friends), how we reach students (society channels, library posters)
-- [ ] **Craft:** clear UI, correct status, useful error messages, clean API (`/docs`)
-- [ ] **Urgency and focus:** feature freeze held, cut list followed
-- [ ] **Stay curious:** tested ordinary / boundary / failure inputs; tested an assumption from the survey and changed something
-- [ ] **AI usage:** OpenRouter summary demonstrated, plus its limitations (few comments, junk input, prompt injection)
-- [ ] **Stripe bonus:** sandbox payment completes, webhook unlocks premium, shown to judges
 
 ## Data
 
@@ -213,45 +212,3 @@ Render's own free PostgreSQL expires after 30 days; Neon is the recommended deve
 
 Free allowances can change. See https://render.com/docs/free and https://neon.com/pricing.
 AI calls are a separate service and are not included in free app hosting.
-
-
-## Git basics for the team
-
-```bash
-git clone https://github.com/Conor-Collins1/Hack-UCD-1.git   # first time only
-git pull                           # get everyone's latest changes before you start
-git checkout -b my-feature         # optional: work on your own branch
-git add <files>                    # stage your changes
-git commit -m "Add status endpoint"
-git push                           # upload (first push of a branch: git push -u origin my-feature)
-```
-
-Pull often, commit small, and don't commit `.env`.
-
-## Shared setup and credentials
-
-See [TEAM_SETUP.md](TEAM_SETUP.md) for teammate onboarding, which settings are public, and where each private credential belongs. The database schema and setup are in this repo; the hosted database itself is not stored in GitHub.
-
-### Connect the sandbox purchase
-
-In the same Stripe sandbox, create an active EUR 1.99 **one-time** Price. Set
-`STRIPE_SECRET_KEY=sk_test_...`, `STRIPE_PRICE_ID=price_...` and the existing HTTPS `PUBLIC_URL`
-in Render Environment; never commit credentials. No publishable key is needed.
-
-Add a Stripe webhook destination at `https://hack-ucd-library.onrender.com/webhooks/stripe`
-for `checkout.session.completed` and `checkout.session.async_payment_succeeded`. Put its signing
-secret in Render as `STRIPE_WEBHOOK_SECRET=whsec_...`, then redeploy. The return page also verifies
-payment directly with Stripe, so it can confirm purchases before webhook setup is finished.
-
-Log in with a demo identity, open Premium and use sandbox card `4242 4242 4242 4242`, any future
-expiry and any three-digit CVC. Completing payment upgrades that account permanently; cancellations
-and unpaid sessions do not. Reload Account to see Premium. Replaying confirmation or webhook
-creates no duplicate payment rows. This remains a sandbox demo with unverified name/email login.
-
-### Private user feedback
-
-Signed-in users can send feedback from the small form on the status page. Messages are saved
-in the existing database in the new feedback table (created automatically on startup).
-Set a random `FEEDBACK_ADMIN_PASSWORD` of at least 32 characters in Render and redeploy.
-Your team can then open `/feedback` and unlock the private inbox with that password.
-Feedback is newest-first with older-page loading. Do not commit or share the password publicly.
