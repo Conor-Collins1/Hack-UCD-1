@@ -114,32 +114,29 @@ async function refreshStatus() {
 }
 
 async function refreshSummary() {
-  const text = $('summary');
+  const list = $('summary');
+  const empty = $('summary-empty');
   const meta = $('summary-meta');
   try {
     const s = await api('/api/summary');
-    const hasSummary = (s.status === 'ok' || s.status === 'stale') && s.summary;
+    const hasSummary = (s.status === 'ok' || s.status === 'stale') && Array.isArray(s.summary) && s.summary.length > 0;
+    listItems(list, hasSummary ? s.summary : [], (li, point) => { li.textContent = point; });
+    list.hidden = !hasSummary;
+    empty.hidden = !!hasSummary;
     if (hasSummary) {
-      text.textContent = s.summary;
       const stale = s.status === 'stale' ? ' May be out of date.' : '';
-      meta.textContent = `From ${s.comment_count} comments · ${timeAgo(s.generated_at)}. AI can make mistakes.${stale}`;
+      meta.textContent = `From ${s.comment_count} comments in the past hour · ${timeAgo(s.generated_at)}. AI can make mistakes.${stale}`;
     } else {
-      text.textContent = s.status === 'not_enough'
-        ? 'Not enough recent comments to summarise yet. A summary appears once a few more people comment.'
+      empty.textContent = s.status === 'not_enough'
+        ? 'Not enough comments in the past hour. Add a few more updates to see the key points.'
         : 'The summary is unavailable right now.';
       meta.textContent = '';
     }
-    listItems($('themes'), hasSummary ? s.themes : [], (li, t) => {
-      li.dataset.sentiment = t.sentiment;
-      li.setAttribute('aria-label', `${t.label}: ${t.count} mentions, ${t.sentiment}`);
-      li.append(document.createTextNode(t.label));
-      const count = document.createElement('span');
-      count.className = 'chip__count';
-      count.textContent = String(t.count);
-      li.append(count);
-    });
   } catch (e) {
-    text.textContent = 'The summary is unavailable right now.';
+    list.replaceChildren();
+    list.hidden = true;
+    empty.hidden = false;
+    empty.textContent = 'The summary is unavailable right now.';
     meta.textContent = '';
   }
 }

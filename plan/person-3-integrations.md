@@ -1,3 +1,5 @@
+> Summary update: display only 1-5 bullet points, using comments from the past hour. Older prose caches are invalidated.
+
 > AI summary implementation is complete: cached, bounded input, validated JSON, moderation IDs, timeout/backoff, and stale fallback. Stripe remains future work.
 
 > Updated scope: keep demo login and the sandbox payments page. Notifications are a future idea only; notification tasks below are deferred.
