@@ -1,3 +1,5 @@
+> Updated scope: keep demo login and the sandbox payments page. Notifications are a future idea only; notification tasks below are deferred.
+
 # Person 2: Frontend, users and pitch
 
 **Name:** _______________
@@ -39,7 +41,7 @@ account), `static/app.js` wired to every endpoint, placeholder CSS. All API shap
 - [ ] Leaderboard page: top 3 highlighted with a "wins free premium" badge
 - [ ] Premium page: price, what you get, Subscribe button, "you're premium" state after paying
       (handle `?session_id=` coming back from Stripe by calling `/api/checkout/confirm`; agree with Person 3)
-- [ ] Account page: points, trust, premium status, ntfy topic with simple setup instructions
+- [ ] Account page: points, trust, premium status, demo login with a clear no-password explanation
 - [ ] If time: go to the library, count free seats at one moment, compare with what the app says
 - [ ] Collect survey results: key numbers + 3 good quotes
 
@@ -61,7 +63,7 @@ account), `static/app.js` wired to every endpoint, placeholder CSS. All API shap
 ---
 
 ## If you're behind, cut in this order
-1. Account page polish (keep login + ntfy topic working)
+1. Account page polish (keep demo login working)
 2. Leaderboard styling (a plain list is fine)
 3. The library seat-count check
 

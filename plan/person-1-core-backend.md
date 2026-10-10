@@ -1,3 +1,5 @@
+> Updated scope: keep demo login and the sandbox payments page. Notifications are a future idea only; notification tasks below are deferred.
+
 # Person 1: Core backend
 
 **Name:** Conor
@@ -49,7 +51,7 @@ basic replay script. Occupancy calculation is implemented; trust scoring and lea
 
 ### 2:45–3:30 · Integration (whole team)
 - [ ] `python -m library.cli reset-db --confirm-reset`, run with `DEMO_MODE=1 DEMO_SPEED=60`, run the replay
-- [ ] Check: status climbs to Full, spammer gets flagged, leaderboard fills, Person 3's alerts fire
+- [ ] Check: status climbs to Full, spammer gets flagged, leaderboard fills, the payments page remains available
 - [ ] **Feature freeze at 3:30**
 
 ### 3:30–4:15 · Testing

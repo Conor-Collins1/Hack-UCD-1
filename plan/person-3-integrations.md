@@ -1,8 +1,10 @@
-# Person 3: Integrations (AI, Stripe, notifications)
+> Updated scope: keep demo login and the sandbox payments page. Notifications are a future idea only; notification tasks below are deferred.
+
+# Person 3: Integrations (AI and Stripe)
 
 **Name:** _______________
 
-**Your job:** the three external services. **AI usage** is a full judging criterion (0/10 without a
+**Your job:** AI and sandbox payments. **AI usage** is a full judging criterion (0/10 without a
 working OpenRouter feature), and **Stripe** is worth +5 bonus points, but only if the whole flow works.
 
 **Your files:** `library/ai.py`, `library/payments.py`, `library/notify.py`,
@@ -21,7 +23,6 @@ working OpenRouter feature), and **Stripe** is worth +5 bonus points, but only i
 - [ ] Stripe: create a sandbox account, a product "Library Status Premium", a **€1.99/month**
       recurring price → `STRIPE_PRICE_ID`; copy the `sk_test_` key
 - [ ] Install the Stripe CLI, `stripe login`
-- [ ] Install the ntfy app on your phone
 
 ### 0:20–1:30 · AI summary (`ai.py`)
 - [ ] `get_summary`: visible comments from the last 2 hours; < 3 comments → `status: "not_enough"`, no API call
@@ -42,15 +43,9 @@ working OpenRouter feature), and **Stripe** is worth +5 bonus points, but only i
       webhook (shared helper). This is the backup if the webhook doesn't arrive during the demo
 - [ ] Test with card `4242 4242 4242 4242` while running `stripe listen --forward-to 127.0.0.1:8000/webhooks/stripe`
 - [ ] Tell Person 2 the flow is live so they can do the "you're premium" state
-- [ ] `notify.check_and_send`:
-  - **space_opening:** previous level `full` → new level not `full`
-  - **filling_up:** new level not `full` and `score + trend_per_min * 15 >= 0.9`
-  - to every premium user with an `ntfy_topic` (`premium_until` in the future), max once per kind per hour
-    (check `notifications_sent`), wrapped in try/except
-- [ ] `send`: `requests.post(f"{NTFY_SERVER}/{topic}", data=message, headers={"Title": title}, timeout=5)`
 
 ### 2:45–3:30 · Integration (whole team)
-- [ ] Run the replay with your phone subscribed: the alert should arrive when the status climbs
+- [ ] Run the replay and verify the AI summary alongside the current library status
 - [ ] Do one full payment from start to finish and check the account page shows premium
 - [ ] **Feature freeze at 3:30**
 
@@ -60,13 +55,12 @@ working OpenRouter feature), and **Stripe** is worth +5 bonus points, but only i
 - [ ] Write a short "AI limitations" note for the pitch (3 bullet points)
 
 ### 4:15–5:00 · Demo prep (whole team)
-- [ ] You do the live payment and show the phone alert. Keep the Stripe dashboard open to
+- [ ] You do the live payment . Keep the Stripe dashboard open to
       show the test payment and subscription
 
 ---
 
 ## If you're behind, cut in this order
-1. The `filling_up` alert (keep `space_opening`)
 2. The webhook (keep `/api/checkout/confirm`, which still uses Stripe's confirmation to activate access)
 3. Spam hiding in the AI call (keep the summary)
 

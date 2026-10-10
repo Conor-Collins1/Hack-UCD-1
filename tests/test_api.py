@@ -104,8 +104,7 @@ def test_demo_and_integrations_not_falsely_available(client, monkeypatch):
     login(client)
     assert client.post('/api/checkout').status_code == 503
     assert client.post('/webhooks/stripe',content=b'raw payload').status_code == 503
-    assert client.post('/api/me/ntfy',json={'topic':'library-demo-topic'}).status_code == 200
-    assert client.get('/api/me').json()['user']['ntfy_topic'] == 'library-demo-topic'
+    assert client.post('/api/me/ntfy',json={'topic':'library-demo-topic'}).status_code == 404
 
 
 def test_status_decay_exclusion_and_hysteresis(client, monkeypatch):
