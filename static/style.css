@@ -135,16 +135,10 @@ main:focus { outline: none; }
   border: 1px solid var(--sand-line); border-radius: var(--radius-sm); padding: var(--half) var(--s1);
 }
 
-/* Dark card (AI summary): same espresso as the leaderboard band. */
-.card--dark { background: var(--espresso); border-color: var(--espresso); color: var(--espresso-text); }
-.card--dark .title { color: var(--espresso-text); }
-.card--dark .tag { color: var(--espresso-muted); border-color: rgba(203, 191, 174, .45); }
-.card--dark .caption { color: var(--espresso-muted); }
-.card--dark .chips li { background: rgba(255, 253, 250, .06); border-color: var(--border-strong); color: var(--espresso-text); }
-.card--dark .chips li::before { background: #a59d93; }
-.card--dark .chips li[data-sentiment="positive"]::before { background: #62c18a; }
-.card--dark .chips li[data-sentiment="negative"]::before { background: #f07d70; }
-.card--dark .chips .chip__count { color: var(--espresso-muted); }
+/* Soft card (AI summary): light oak with an oak accent line, set apart from the sand boxes
+   without a heavy dark block. Text 13.7:1, muted 5.9:1. */
+.card--soft { background: #f3e7d6; border-color: #dcc6a8; border-left: 4px solid var(--oak); }
+.card--soft .tag { color: var(--oak); border-color: #c9a27a; background: var(--surface); }
 
 /* ---- Status card ---- */
 .status {
@@ -349,8 +343,8 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 @media (min-width: 840px) { .hero { min-height: 300px; padding: var(--s5); } }
 
 /* ---- Leaderboard: "The Stacks" ----
-   Top 3 are book spines on an oak shelf in an espresso band (the library's reading-room
-   lamps give the warm glow); everyone else is a catalogue card on sand. All text >= 4.5:1. */
+   Top 3 are book spines on an oak shelf; everyone else is a catalogue card. The whole
+   page sits on sand so the coloured spines are the focus. All text >= 4.5:1. */
 :root {
   --espresso: #2b2621;
   --espresso-text: #f3eee7;     /* 13.0:1 on espresso */
@@ -370,20 +364,21 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .stacks {
   position: relative; overflow: hidden;
   padding: var(--s4) var(--s2) 0; border-radius: var(--radius);
-  color: var(--espresso-text);
+  color: var(--text);
   background:
-    radial-gradient(ellipse 60% 55% at 50% 0%, rgba(224, 182, 112, .16), transparent 70%),
-    var(--espresso);
+    radial-gradient(ellipse 60% 55% at 50% 0%, rgba(255, 253, 250, .55), transparent 70%),
+    var(--sand);
+  border: 1px solid var(--sand-line); border-bottom: 0;
 }
 @media (min-width: 600px) { .stacks { padding: var(--s5) var(--s4) 0; } }
 .stacks__intro { max-width: 600px; }
-.stacks__eyebrow { margin: 0 0 var(--s1); font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--brass-text); }
-.stacks__title { margin: 0 0 var(--s1); color: var(--espresso-text); }
-.stacks__lede { margin: 0 0 var(--s1); color: var(--espresso-muted); }
-.stacks__lede strong { color: var(--espresso-text); }
-.stacks__reset { margin: 0; font-size: 14px; line-height: 20px; color: var(--brass-text); }
+.stacks__eyebrow { margin: 0 0 var(--s1); font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--oak); }
+.stacks__title { margin: 0 0 var(--s1); color: var(--text); }
+.stacks__lede { margin: 0 0 var(--s1); color: var(--sand-muted); }
+.stacks__lede strong { color: var(--text); }
+.stacks__reset { margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--oak); }
 .stacks__reset:empty { display: none; }
-.stacks__empty { margin: 0; padding: var(--s2) 0 var(--s3); text-align: center; color: var(--espresso-muted); font-size: 14px; line-height: 20px; }
+.stacks__empty { margin: 0; padding: var(--s2) 0 var(--s3); text-align: center; color: var(--sand-muted); font-size: 14px; line-height: 20px; }
 
 /* Shelf of three spines: 2nd | 1st | 3rd, like a podium. DOM order stays 1, 2, 3 for screen readers. */
 .shelf {
@@ -424,7 +419,7 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   background: var(--ribbon); color: var(--espresso); font-size: 12px; line-height: 16px; font-weight: 600;
 }
 /* Open spot: a gap on the shelf with a dashed outline, nudging people to take it. */
-.spine--open { background: transparent; box-shadow: none; border: 2px dashed rgba(203, 191, 174, .55); border-bottom: 0; color: var(--espresso-muted); }
+.spine--open { background: rgba(255, 253, 250, .45); box-shadow: none; border: 2px dashed var(--border-strong); border-bottom: 0; color: var(--sand-muted); }
 .spine--open .spine__rank { opacity: .6; }
 
 .shelf__plank {

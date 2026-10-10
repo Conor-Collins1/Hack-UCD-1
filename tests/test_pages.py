@@ -170,5 +170,5 @@ def test_status_box_is_tinted_by_level():
         assert f'.status[data-level="{level}"]' in css and f'--c-bg: var(--{token}-bg)' in css
 
 
-def test_summary_card_uses_dark_palette(client):
-    assert 'class="card card--dark"' in client.get('/').text
+def test_summary_card_uses_soft_palette(client):
+    assert 'class="card card--soft"' in client.get('/').text
