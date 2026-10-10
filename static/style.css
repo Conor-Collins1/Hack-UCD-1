@@ -507,3 +507,7 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 #leaderboard-error { color: var(--error); margin-top: var(--s2); }
 #feedback-form { max-width: 720px; }
 .panel--you .notice { background: rgba(255,253,250,.12); color: var(--surface); border-color: var(--ribbon); }
+
+/* Keep discussions contained while leaving the comment form visible. */
+#comments { max-height: 24rem; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding-right: var(--s1); }
+#comments:empty { padding-right: 0; }
