@@ -1,6 +1,6 @@
 /* Library Status design system. OWNER: Person 2.
    "Neutral Elegance": warm neutrals taken from the James Joyce Library interior
-   (oak, linen, concrete), one light and one dark theme, 8px grid, Material 3 type scale.
+   (oak, linen, concrete), 8px grid, Material 3 type scale.
    Every pair below passes WCAG 2.2 AA: 4.5:1 for text, 3:1 for UI parts. Ratios are
    against --surface unless noted. Re-check any change with a contrast checker. */
 
@@ -31,33 +31,7 @@
   --shadow: 0 1px 2px rgba(43, 38, 33, .06);
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #161411;
-  --surface: #211e1a;
-  --surface-alt: #2a2621;
-  --border: #3b362f;
-  --border-strong: #8a8074;     /* 4.3:1 */
-  --text: #f3eee7;              /* 14.4:1 */
-  --text-muted: #bdb3a6;        /* 8.0:1 */
-  --ink: #f3eee7;               /* light button on dark */
-  --ink-hover: #d9d1c6;
-  --on-ink: #211d18;
-  --accent: #e3b688;            /* 8.9:1 */
-  --focus: #e3b688;
-  --error: #f07d70;             /* 6.2:1 */
-
-  --ok: #62c18a;      --ok-bg: #1c2e23;      --ok-text: #a9e2bf;
-  --busy: #e3a447;    --busy-bg: #33281a;    --busy-text: #f3d29b;
-  --full: #f07d70;    --full-bg: #3a201d;    --full-text: #f7bab1;
-  --none: #9d958b;    --none-bg: #2c2823;    --none-text: #d9d1c6;
-
-  --hero-shade: rgba(10, 8, 6, .86);
-  --shadow: none;
-}
-
 :root {
-
   /* 8px grid */
   --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px; --s5: 40px; --s6: 48px; --s8: 64px;
   --half: 4px;
@@ -162,7 +136,11 @@ main:focus { outline: none; }
 }
 
 /* ---- Status card ---- */
-.status { --c: var(--none); --c-bg: var(--none-bg); --c-text: var(--none-text); border-top: 4px solid var(--c); }
+.status {
+  --c: var(--none); --c-bg: var(--none-bg); --c-text: var(--none-text);
+  --fade: 1200ms ease-in-out;   /* how slowly colours change when the level changes */
+  border-top: 4px solid var(--c); transition: border-color var(--fade);
+}
 .status[data-level="not_full"] { --c: var(--ok);   --c-bg: var(--ok-bg);   --c-text: var(--ok-text); }
 .status[data-level="busy"]     { --c: var(--busy); --c-bg: var(--busy-bg); --c-text: var(--busy-text); }
 .status[data-level="full"]     { --c: var(--full); --c-bg: var(--full-bg); --c-text: var(--full-text); }
@@ -171,6 +149,7 @@ main:focus { outline: none; }
 .status__icon {
   flex: none; width: var(--s6); height: var(--s6); border-radius: var(--radius);
   background: var(--c-bg); color: var(--c); display: grid; place-items: center;
+  transition: background-color var(--fade), color var(--fade);
 }
 /* Shape differs per level so it's not colour alone (1.4.1). */
 .status__icon::before { content: ""; width: 20px; height: 20px; background: currentColor; border-radius: 50%; }
@@ -183,10 +162,27 @@ main:focus { outline: none; }
 
 .scale { list-style: none; margin: 0 0 var(--s3); padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--half); }
 .scale li {
-  padding: var(--s1) 0 0; border-top: 8px solid var(--border);
+  position: relative; padding: var(--s2) 0 0;
   font-size: 12px; line-height: 16px; color: var(--text-muted);
+  transition: color var(--fade);
 }
-.scale li[aria-current="true"] { border-top-color: var(--c); color: var(--c-text); font-weight: 600; }
+/* Each box shows its third of one gradient, so together they read as one gauge
+   from green (Not full) to red (Full). The current level is solid; the others are faded. */
+.scale li::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 8px; border-radius: 2px;
+  background-image: linear-gradient(to right, var(--ok) 10%, var(--busy) 50%, var(--full) 90%);
+  background-image: linear-gradient(in oklab to right, var(--ok) 10%, var(--busy) 50%, var(--full) 90%);
+  background-size: calc(300% + 2 * var(--half)) 100%;
+  opacity: .35; transition: opacity var(--fade), transform var(--fade);
+  transform-origin: bottom; transform: scaleY(.75);
+}
+.scale li[data-step="not_full"]::before { background-position: 0 0; }
+.scale li[data-step="busy"]::before     { background-position: 50% 0; }
+.scale li[data-step="full"]::before     { background-position: 100% 0; }
+.scale li[aria-current="true"]::before  { opacity: 1; transform: scaleY(1); }
+.scale li[data-step="not_full"][aria-current="true"] { color: var(--ok-text); font-weight: 600; }
+.scale li[data-step="busy"][aria-current="true"]     { color: var(--busy-text); font-weight: 600; }
+.scale li[data-step="full"][aria-current="true"]     { color: var(--full-text); font-weight: 600; }
 
 .facts {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2);
@@ -339,23 +335,6 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .hero .supporting { color: #f3eee7; }
 @media (min-width: 600px) { .hero { min-height: 260px; padding: var(--s4) var(--s3); } }
 @media (min-width: 840px) { .hero { min-height: 300px; padding: var(--s5); } }
-
-/* ---- Theme toggle ---- */
-.theme-toggle {
-  width: var(--target); height: var(--target); min-height: 0; padding: 0;
-  border: 0; background: transparent; color: var(--text); border-radius: var(--radius-sm);
-}
-.theme-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.theme-toggle .icon-sun { display: none; }
-[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
-[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
-@media (hover: hover) { .theme-toggle:hover:not(:disabled) { background: var(--surface-alt); } }
-.app-bar__end { display: flex; align-items: center; gap: var(--s1); }
-@media (max-width: 599px) {
-  .app-bar__end { display: contents; }
-  .theme-toggle { order: 1; margin-right: calc(-1 * var(--s1)); }
-  .nav { order: 2; }
-}
 
 /* ---- Generic lists used by leaderboard/premium/account until they get their own pass ---- */
 .card ul:not([class]), .card ol:not([class]) { padding-left: var(--s3); }

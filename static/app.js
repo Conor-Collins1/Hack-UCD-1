@@ -401,32 +401,3 @@ async function initAccountPage() {
   });
   $('logout').addEventListener('click', async () => { await api('/api/logout', { method: 'POST' }); location.reload(); });
 }
-
-// ---- Theme toggle (every page) ----
-// base.html sets data-theme before first paint; this just wires the button.
-
-function initThemeToggle() {
-  const button = $('theme-toggle');
-  if (!button) return;
-  const root = document.documentElement;
-  const sync = () => {
-    const dark = root.dataset.theme === 'dark';
-    button.setAttribute('aria-pressed', String(dark));
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = dark ? '#211e1a' : '#fffdfa';
-  };
-  button.addEventListener('click', () => {
-    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('theme', root.dataset.theme); } catch (e) { /* private mode: still works for this page */ }
-    sync();
-  });
-  // Follow the OS setting live, unless the user picked a theme here.
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-    let saved = null;
-    try { saved = localStorage.getItem('theme'); } catch (e) { /* ignore */ }
-    if (!saved) { root.dataset.theme = event.matches ? 'dark' : 'light'; sync(); }
-  });
-  sync();
-}
-
-initThemeToggle();
