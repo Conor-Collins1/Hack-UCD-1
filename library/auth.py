@@ -1,27 +1,25 @@
-"""Simple login: name + email, stored in Flask's signed session cookie. OWNER: Person 1."""
-from functools import wraps
-
-from flask import jsonify, session
+"""Name/email demo login with a signed Starlette session. OWNER: Person 1.
+This does not verify email ownership; use synthetic identities until verified login is added.
+"""
+from fastapi import HTTPException, Request
 from sqlalchemy import select
+from library.db import engine, users
 
-from library.db import users
 
-
-def current_user(conn):
-    """Return the logged-in user's row (as a mapping), or None."""
-    user_id = session.get('user_id')
-    if user_id is None:
+def current_user(conn, request):
+    identity = request.session.get('user_id')
+    if identity is None:
         return None
-    return conn.execute(select(users).where(users.c.id == user_id)).mappings().first()
+    return conn.execute(select(users).where(users.c.id == identity)).mappings().first()
 
 
-def login_required(view):
-    @wraps(view)
-    def wrapper(*args, **kwargs):
-        if session.get('user_id') is None:
-            return jsonify(error='Log in first.'), 401
-        return view(*args, **kwargs)
-    return wrapper
+def require_user(request: Request):
+    with engine.connect() as conn:
+        user = current_user(conn, request)
+    if user is None:
+        request.session.clear()
+        raise HTTPException(401, 'Log in first.')
+    return user['id']
 
 
 def user_json(user):

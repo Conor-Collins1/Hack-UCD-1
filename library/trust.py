@@ -53,7 +53,7 @@ def leaderboard(conn, limit=10):
 
 def reward_top_users(conn):
     """Give the top TOP_N_REWARD users a free month: payments.grant_premium(conn, user_id, 30, 'leaderboard').
-    Then reset everyone's points to 0. Run by `flask --app app reward-top`.
+    Then reset everyone's points to 0. Run by `python -m library.cli reward-top`.
 
     TODO(Person 1)
     """

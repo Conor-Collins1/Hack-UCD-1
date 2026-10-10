@@ -1,25 +1,25 @@
 # Person 1: Core backend
 
-**Name:** _______________
+**Name:** Conor
 
 **Your job:** make the status *correct and trustworthy*. You own the data, the status
 calculation, bad-actor detection, the leaderboard, and the demo replay script that drives
 the whole demo.
 
-**Your files:** `app.py`, `library/db.py`, `library/auth.py`, `library/clock.py`,
+**Your files:** `app/main.py`, `library/db.py`, `library/auth.py`, `library/clock.py`,
 `library/status.py`, `library/trust.py`, `library/core_routes.py`, `scripts/replay.py`,
 `tests/test_status.py`, `tests/test_trust.py`.
 
-**Already in the skeleton:** all tables, login, the report/comment/status/leaderboard
+**Already in the skeleton:** FastAPI app, SQLAlchemy tables, login, the report/comment/status/leaderboard
 endpoints with validation, the 10-minute report cooldown, the demo endpoints, and a
-basic replay script. The algorithms are stubs marked `TODO(Person 1)`.
+basic replay script. Occupancy calculation is implemented; trust scoring and leaderboard rewards remain TODO(Person 1).
 
 ---
 
 ## Timeline
 
 ### 0:00–0:20 · Setup (whole team together)
-- [ ] Everyone clones the repo, creates `.venv`, runs `pytest` (6 tests should pass)
+- [ ] Everyone clones the repo, creates `.venv`, runs `pytest` (the migration API tests should pass)
 - [ ] Walk the team through `CLAUDE.md`: tables, endpoints, who owns what
 - [ ] Agree any changes to the contract **now**, while it's cheap
 
@@ -48,7 +48,7 @@ basic replay script. The algorithms are stubs marked `TODO(Person 1)`.
 - [ ] Tests: honest user's trust rises, spammer gets flagged, flagged reports don't move the status
 
 ### 2:45–3:30 · Integration (whole team)
-- [ ] `flask --app app reset-db`, run with `DEMO_MODE=1 DEMO_SPEED=60`, run the replay
+- [ ] `python -m library.cli reset-db --confirm-reset`, run with `DEMO_MODE=1 DEMO_SPEED=60`, run the replay
 - [ ] Check: status climbs to Full, spammer gets flagged, leaderboard fills, Person 3's alerts fire
 - [ ] **Feature freeze at 3:30**
 
@@ -72,4 +72,4 @@ basic replay script. The algorithms are stubs marked `TODO(Person 1)`.
 ## Watch out for
 - SQLite returns datetimes without timezones: wrap them in `clock.as_utc()`
 - Use `clock.now()` everywhere or demo speed-up will break
-- `DEMO_SPEED` only works with one local process (`flask run`), not with gunicorn on Render
+- `DEMO_SPEED` only works with one local process (`uvicorn app.main:app`), not with multiple workers on Render

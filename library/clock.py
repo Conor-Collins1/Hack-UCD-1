@@ -2,7 +2,7 @@
 
 With DEMO_SPEED=60 in .env, time runs 60x faster (1 real second = 1 app minute),
 so decay windows, cooldowns and rate limits all shrink for the live demo.
-Only use DEMO_SPEED with a single local process (flask run), not on Render.
+Only use DEMO_SPEED with a single local process (uvicorn app.main:app), not on Render.
 """
 import os
 import time

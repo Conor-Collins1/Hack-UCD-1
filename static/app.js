@@ -89,7 +89,7 @@ function initStatusPage() {
 async function initLeaderboardPage() {
   try {
     const data = await api('/api/leaderboard');
-    if (!data.leaderboard.length) { $('leaderboard').innerHTML = '<li>No reports yet.</li>'; return; }
+    if (!data.leaderboard.length) { $('leaderboard').textContent = 'Leaderboard scoring is not implemented yet.'; return; }
     listItems($('leaderboard'), data.leaderboard, (li, row) => { li.textContent = `${row.name} · ${row.points} pts`; });
   } catch (e) { $('leaderboard').textContent = e.message; }
 }

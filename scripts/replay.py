@@ -12,7 +12,7 @@ import time
 
 import requests
 
-BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:5000'
+BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:8000'
 SPEED = 60  # must match DEMO_SPEED
 
 # (app minute, email, level). 'spammer@' keeps reporting the opposite of everyone else.

@@ -18,7 +18,7 @@ account), `static/app.js` wired to every endpoint, placeholder CSS. All API shap
 ## Timeline
 
 ### 0:00–0:20 · Setup (whole team together)
-- [ ] Clone, create `.venv`, `pytest`, `flask --app app run --debug`, open http://localhost:5000
+- [ ] Clone, create `.venv`, `pytest`, `uvicorn app.main:app --reload`, open http://127.0.0.1:8000
 - [ ] Write the survey (5 questions max, Google Form). Suggested:
   1. How often do you go to the library to study?
   2. How often is it too full when you arrive? (never / sometimes / often / always)

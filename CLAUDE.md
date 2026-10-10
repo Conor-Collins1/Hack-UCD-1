@@ -5,7 +5,7 @@ Students tap a button to report whether the UCD library is Not full / ~80% full 
 combines reports into a live status, flags people who keep giving false reports, summarises
 comments with AI (OpenRouter), alerts premium subscribers, and has a leaderboard.
 
-Before doing anything, ask your human which person they are (1, 2 or 3) and read their plan
+Use the person identified in the conversation (Conor is Person 1); ask only if unknown, then read their plan
 file in `plan/`. The full plan and algorithms are in `README.md`.
 
 ## Rules (read these first)
@@ -29,17 +29,24 @@ file in `plan/`. The full plan and algorithms are in `README.md`.
 9. Commit small and often; `git pull` before you start and before you push.
 10. Don't claim something works until you have run it. Say what you tested.
 
+## Agreed migration
+
+Person 1 confirmed the team changed to FastAPI. The migration may update all affected routing,
+frontend wiring, configuration, tests and documentation. New work follows the ownership table.
+Use APIRouter (`router`), FastAPI Request/Depends and JSONResponse; no WSGI entry point.
+The string levels and existing table/API contracts below remain in place.
+
 ## Stack
 
-Flask 3 + SQLAlchemy Core (no ORM) · SQLite locally, Supabase Postgres via `DATABASE_URL` on
-Render · Jinja templates + vanilla JS (no build step) · `openai` SDK pointed at OpenRouter ·
+FastAPI + Uvicorn + SQLAlchemy Core (no ORM) · SQLite locally, hosted Postgres via `DATABASE_URL` on
+Render (free tier) · Jinja templates + vanilla JS (no build step) · `openai` SDK pointed at OpenRouter ·
 `stripe` (sandbox) · ntfy.sh via `requests` · pytest.
 
 ## File ownership
 
 | Path | Owner |
 |---|---|
-| `app.py`, `library/db.py`, `library/auth.py`, `library/clock.py` | Person 1 |
+| `app/main.py`, `library/cli.py`, `library/http.py`, `library/db.py`, `library/auth.py`, `library/clock.py` | Person 1 |
 | `library/status.py`, `library/trust.py`, `library/core_routes.py`, `scripts/replay.py` | Person 1 |
 | `templates/`, `static/`, `library/pages.py` | Person 2 |
 | `library/ai.py`, `library/notify.py`, `library/payments.py`, `library/integration_routes.py` | Person 3 |
@@ -73,14 +80,14 @@ Display labels and scores live in `library/db.py`: `LEVEL_LABEL`, `LEVEL_SCORE` 
 | `status.save_snapshot(conn, status)` | P1 | core_routes |
 | `trust.judge_pending_reports(conn)` | P1 | core_routes |
 | `trust.leaderboard(conn, limit=10) -> list` | P1 | core_routes |
-| `trust.reward_top_users(conn) -> list` | P1 | `flask reward-top` |
+| `trust.reward_top_users(conn) -> list` | P1 | `python -m library.cli reward-top` |
 | `notify.check_and_send(conn, previous_status, new_status) -> list[str]` | P3 | core_routes, after every report |
 | `ai.get_summary(conn) -> dict` (shape = GET /api/summary) | P3 | integration_routes |
 | `payments.grant_premium(conn, user_id, days, source)` | P3 | payments, trust.reward_top_users |
 
 ### Endpoints
 
-All JSON. Errors: `{"error": "..."}`. Auth is a Flask session cookie set by `/api/login`;
+All JSON. Errors: `{"error": "..."}`. Auth is a Starlette signed session cookie (`request.session`) set by `/api/login`;
 endpoints marked 🔒 return 401 when logged out.
 
 | Method + path | Owner | Request | Success response |
@@ -119,11 +126,11 @@ Summary = {"status": "ok"|"not_enough"|"stale"|"error", "summary": str|null,
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env            # then fill in keys
-flask --app app init-db
-flask --app app run --debug     # http://localhost:5000
+python -m library.cli init-db
+uvicorn app.main:app --reload     # http://127.0.0.1:8000
 pytest
 ```
 
-Demo: set `DEMO_MODE=1` and `DEMO_SPEED=60` in `.env`, run `flask --app app reset-db`, start
+Demo: set `DEMO_MODE=1` and `DEMO_SPEED=60` in `.env`, run `python -m library.cli reset-db --confirm-reset`, start
 the app, then `python scripts/replay.py` in another terminal.
-Stripe webhooks locally: `stripe listen --forward-to localhost:5000/webhooks/stripe`.
+Stripe webhooks locally: `stripe listen --forward-to 127.0.0.1:8000/webhooks/stripe`.

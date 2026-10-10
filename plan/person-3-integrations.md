@@ -40,7 +40,7 @@ working OpenRouter feature), and **Stripe** is worth +5 bonus points, but only i
       `payments` row (skip if `stripe_session_id` already exists) and call `grant_premium(conn, user_id, 30, "stripe")`
 - [ ] `/api/checkout/confirm`: retrieve the session; if `payment_status == "paid"`, do the same as the
       webhook (shared helper). This is the backup if the webhook doesn't arrive during the demo
-- [ ] Test with card `4242 4242 4242 4242` while running `stripe listen --forward-to localhost:5000/webhooks/stripe`
+- [ ] Test with card `4242 4242 4242 4242` while running `stripe listen --forward-to 127.0.0.1:8000/webhooks/stripe`
 - [ ] Tell Person 2 the flow is live so they can do the "you're premium" state
 - [ ] `notify.check_and_send`:
   - **space_opening:** previous level `full` → new level not `full`
@@ -74,6 +74,6 @@ working OpenRouter feature), and **Stripe** is worth +5 bonus points, but only i
 
 ## Watch out for
 - **Sandbox keys only** (`sk_test_`); `payments.stripe_client()` refuses anything else
-- Read the webhook body with `request.get_data()` (raw bytes); signature checks fail otherwise
+- Read the webhook body with `await request.body()` (raw bytes); signature checks fail otherwise
 - On Render, the webhook needs a real endpoint in the Stripe dashboard; locally use `stripe listen`
 - Never let a failed API call break a report submission or a page load
