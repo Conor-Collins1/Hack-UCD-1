@@ -33,6 +33,29 @@
       <p class="caption" id="status-updated"></p>
     </section>
 
+    <!-- Premium forecast -->
+    <section class="card forecast" id="forecast-card" data-level="unknown" aria-labelledby="forecast-heading">
+      <div class="card__header">
+        <h2 id="forecast-heading" class="title">In 1 hour</h2>
+        <span class="tag">Premium</span>
+      </div>
+      <div id="forecast-body" hidden>
+        <p class="forecast__label"><span class="forecast__dot" aria-hidden="true"></span><span id="forecast-label"></span></p>
+        <p class="body" id="forecast-explanation"></p>
+        <dl class="facts">
+          <div><dt>Forecast for</dt><dd id="forecast-time">–</dd></div>
+          <div><dt>Likely range</dt><dd id="forecast-range">–</dd></div>
+          <div><dt>Confidence</dt><dd id="forecast-confidence">–</dd></div>
+        </dl>
+        <p class="caption" id="forecast-note"></p>
+      </div>
+      <div id="forecast-locked" hidden>
+        <p class="body-muted">Plan your trip: see how full the library is likely to be in an hour, based on past weeks and live reports.</p>
+        <a class="btn btn--primary" href="/premium">Unlock with Premium · €1.99</a>
+      </div>
+      <p class="body-muted" id="forecast-msg">Loading…</p>
+    </section>
+
     <!-- Report -->
     <section class="card" id="report-card" aria-labelledby="report-heading">
       <h2 id="report-heading" class="title">How full is it where you are?</h2>

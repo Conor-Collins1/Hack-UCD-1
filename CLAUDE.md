@@ -97,6 +97,17 @@ Preserve main's API contracts, +5/+2 participation scoring, shared ranks and per
 AI bullet summaries from the past hour, one-time permanent sandbox Premium and private feedback.
 Do not restore notifications, sample leaderboard data, delayed trust-based points or monthly resets.
 
+## Premium 1-hour forecast (team member request)
+
+A team member requested a Premium-only forecast of occupancy one hour ahead, via PR for team review.
+New files: `library/forecast.py`, `library/forecast_routes.py`, `scripts/generate_history.py`,
+`data/occupancy_history.csv` (SYNTHETIC, regenerate with the script; a test checks they match),
+`tests/test_forecast.py`. Small additions: router include in `app/main.py`, a card on `/` in
+templates/static. Forecast = typical (weekday, 15-min slot) score from recency-weighted history
++ 0.5 x (live score - typical now); live is ignored when no reports in 45 min or library closed.
+Same level thresholds as status (busy >= 0.5, full > 0.9). No new tables or dependencies; history
+never goes into `reports`. Assumed hours Mon-Fri 08-22, Sat-Sun 10-18 Europe/Dublin.
+
 ## Stack
 
 FastAPI + Uvicorn + SQLAlchemy Core (no ORM) · SQLite locally, hosted Postgres via `DATABASE_URL` on
@@ -111,6 +122,7 @@ Render (free tier) · Jinja templates + vanilla JS (no build step) · `openai` S
 | `library/status.py`, `library/trust.py`, `library/core_routes.py`, `scripts/replay.py` | Person 1 |
 | `templates/`, `static/`, `library/pages.py` | Person 2 |
 | `library/ai.py`, `library/notify.py`, `library/payments.py`, `library/integration_routes.py` | Person 3 |
+| `library/forecast.py`, `library/forecast_routes.py`, `scripts/generate_history.py`, `data/` | Forecast author (review via PR) |
 | `tests/` | Everyone: add your own test file, e.g. `tests/test_ai.py` |
 | `CLAUDE.md`, `README.md` | Everyone, only after agreeing as a team |
 
@@ -162,6 +174,7 @@ endpoints marked 🔒 return 401 when logged out.
 | `POST /api/comments` 🔒 | P1 | `{"text"}` (1–280 chars) | 201 `{"id", "text", "points_awarded"}` |
 | `GET /api/leaderboard` | P1 | | `{"leaderboard": [{"id", "rank", "name", "points", "reports_total"}], "current_user": {"id", "name", "points", "rank", "flagged"}|null, "total_contributors": int}` |
 | `GET /api/summary` | P3 | | `Summary` |
+| `GET /api/forecast` 🔒 | Forecast | | `Forecast` · 403 `{"error", "premium_required": true}` for non-Premium · 503 if history unreadable |
 | `POST /api/checkout` 🔒 | P3 | | `{"url"}` (Stripe Checkout URL) |
 | `GET /api/checkout/confirm?session_id=` 🔒 | P3 | | `{"user": User}` once paid |
 | `POST /webhooks/stripe` | P3 | Stripe event | `{"received": true}` |
@@ -179,6 +192,10 @@ Status  = {"level", "label", "score", "confidence": "low"|"medium"|"high",
 Summary = {"status": "ok"|"not_enough"|"stale"|"error", "summary": list[str]|null,
            "themes": [{"label", "sentiment": "positive"|"neutral"|"negative", "count"}],
            "comment_count", "generated_at"}
+Forecast = {"forecast_for": ISO UTC, "horizon_minutes": 60, "open": bool,
+            "level": str|null, "label": str ("Closed" when shut), "score": float|null,
+            "range": [low, high]|null, "typical_score": float|null, "used_live_data": bool,
+            "confidence": "low"|"medium"|"high"|null, "explanation": str, "data_note": str}
 ```
 
 ## Running

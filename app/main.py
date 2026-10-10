@@ -16,7 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException
 from starlette.middleware.sessions import SessionMiddleware
-from library import core_routes, db, integration_routes, pages
+from library import core_routes, db, forecast_routes, integration_routes, pages
 
 ROOT = Path(__file__).resolve().parent.parent
 production = os.environ.get('APP_ENV') == 'production'
@@ -60,6 +60,7 @@ app.add_middleware(SessionMiddleware, secret_key=secret or secrets.token_urlsafe
 app.mount('/static', StaticFiles(directory=str(ROOT / 'static')), name='static')
 app.include_router(core_routes.router)
 app.include_router(integration_routes.router)
+app.include_router(forecast_routes.router)
 app.include_router(pages.router)
 
 @app.exception_handler(HTTPException)
