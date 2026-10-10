@@ -1,26 +1,62 @@
 /* Library Status design system. OWNER: Person 2.
-   Neutral palette, 8px spacing grid, Material 3 type scale, WCAG 2.2 AA.
-   Contrast ratios noted next to text colours are against the surface they sit on. */
+   "Neutral Elegance": warm neutrals taken from the James Joyce Library interior
+   (oak, linen, concrete), one light and one dark theme, 8px grid, Material 3 type scale.
+   Every pair below passes WCAG 2.2 AA: 4.5:1 for text, 3:1 for UI parts. Ratios are
+   against --surface unless noted. Re-check any change with a contrast checker. */
 
 :root {
+  color-scheme: light;
   /* Neutrals */
-  --bg: #f4f4f3;
-  --surface: #ffffff;
-  --surface-alt: #f8f8f7;
-  --border: #d9d9d6;
-  --border-strong: #8a8a86;     /* 3.5:1 on white: form control outlines (1.4.11) */
-  --text: #1b1b1a;              /* 17:1 */
-  --text-muted: #565653;        /* 7.3:1 */
-  --ink: #1b1b1a;               /* primary button fill */
-  --ink-hover: #3a3a38;
-  --focus: #1a56db;             /* 5.6:1 on white */
-  --error: #b3261e;             /* 6.5:1 */
+  --bg: #f6f3ee;                /* linen */
+  --surface: #fffdfa;
+  --surface-alt: #f1ece4;
+  --border: #e3dbd0;
+  --border-strong: #8c8073;     /* 3.8:1  form control outlines (1.4.11) */
+  --text: #211d18;              /* 16.5:1 */
+  --text-muted: #5f564c;        /* 7.1:1 */
+  --ink: #2b2621;               /* espresso: primary button fill */
+  --ink-hover: #463e36;
+  --on-ink: #fffdfa;            /* 14.8:1 on --ink */
+  --accent: #7a4a24;            /* oak: links, 7.3:1 */
+  --focus: #7a4a24;
+  --error: #b03a2e;             /* 5.9:1 */
 
-  /* Status: each pair passes 4.5:1 for text and 3:1 for the indicator */
-  --ok: #1e7b45;      --ok-bg: #e8f3ec;      --ok-text: #135230;
-  --busy: #a15c07;    --busy-bg: #fdf3e1;    --busy-text: #6b3d05;
-  --full: #b42318;    --full-bg: #fbeae8;    --full-text: #7a1a12;
-  --none: #6b6b67;    --none-bg: #efefed;    --none-text: #3d3d3a;
+  /* Status: text on -bg >= 8:1, indicator on -bg >= 3.9:1 */
+  --ok: #2f7a4b;      --ok-bg: #e7f0e6;      --ok-text: #1d4f31;
+  --busy: #9a5b0b;    --busy-bg: #fbefd9;    --busy-text: #683d06;
+  --full: #b03a2e;    --full-bg: #f8e5e1;    --full-text: #7a241b;
+  --none: #7a7268;    --none-bg: #eee9e2;    --none-text: #4a433b;
+
+  --hero-shade: rgba(24, 19, 14, .80);
+  --shadow: 0 1px 2px rgba(43, 38, 33, .06);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #161411;
+  --surface: #211e1a;
+  --surface-alt: #2a2621;
+  --border: #3b362f;
+  --border-strong: #8a8074;     /* 4.3:1 */
+  --text: #f3eee7;              /* 14.4:1 */
+  --text-muted: #bdb3a6;        /* 8.0:1 */
+  --ink: #f3eee7;               /* light button on dark */
+  --ink-hover: #d9d1c6;
+  --on-ink: #211d18;
+  --accent: #e3b688;            /* 8.9:1 */
+  --focus: #e3b688;
+  --error: #f07d70;             /* 6.2:1 */
+
+  --ok: #62c18a;      --ok-bg: #1c2e23;      --ok-text: #a9e2bf;
+  --busy: #e3a447;    --busy-bg: #33281a;    --busy-text: #f3d29b;
+  --full: #f07d70;    --full-bg: #3a201d;    --full-text: #f7bab1;
+  --none: #9d958b;    --none-bg: #2c2823;    --none-text: #d9d1c6;
+
+  --hero-shade: rgba(10, 8, 6, .86);
+  --shadow: none;
+}
+
+:root {
 
   /* 8px grid */
   --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px; --s5: 40px; --s6: 48px; --s8: 64px;
@@ -58,8 +94,8 @@ p               { margin: 0 0 var(--s2); }
   h1, .headline { font-size: 32px; line-height: 40px; }
 }
 
-a { color: var(--focus); text-underline-offset: 2px; }
-a:hover { text-decoration-thickness: 2px; }
+a { color: var(--accent); text-underline-offset: 2px; }
+@media (hover: hover) { a:hover { text-decoration-thickness: 2px; } }
 
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 main:focus { outline: none; }
@@ -70,7 +106,7 @@ main:focus { outline: none; }
 }
 .skip-link {
   position: absolute; left: var(--s2); top: -100px; z-index: 10;
-  background: var(--ink); color: #fff; padding: var(--s1) var(--s2); border-radius: var(--radius-sm);
+  background: var(--ink); color: var(--on-ink); padding: var(--s1) var(--s2); border-radius: var(--radius-sm);
 }
 .skip-link:focus { top: var(--s1); }
 
@@ -90,7 +126,7 @@ main:focus { outline: none; }
   margin: 0 var(--half); color: var(--text-muted); font-size: 14px; font-weight: 600; text-decoration: none;
   border-bottom: 2px solid transparent;
 }
-.nav a:hover { color: var(--text); }
+@media (hover: hover) { .nav a:hover { color: var(--text); } }
 .nav a[aria-current="page"] { color: var(--text); border-bottom-color: var(--ink); }
 @media (max-width: 599px) {
   .nav { width: 100%; margin: 0; border-top: 1px solid var(--border); }
@@ -113,7 +149,7 @@ main:focus { outline: none; }
 /* ---- Card ---- */
 .card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: var(--s3) var(--s2); margin: 0 0 var(--s2); min-width: 0;
+  padding: var(--s3) var(--s2); margin: 0 0 var(--s2); min-width: 0; box-shadow: var(--shadow);
 }
 .layout .card { margin: 0; }
 @media (min-width: 600px) { .card { padding: var(--s3); } }
@@ -163,24 +199,64 @@ main:focus { outline: none; }
 .report-options { display: grid; gap: var(--s1); }
 @media (min-width: 600px) and (max-width: 839px) { .report-options { grid-template-columns: repeat(3, 1fr); } }
 .report-option {
-  --c: var(--none);
+  --c: var(--none); --c-bg: var(--none-bg);
+  position: relative; isolation: isolate; overflow: hidden;
   display: flex; align-items: center; justify-content: flex-start; gap: var(--s2); width: 100%; min-height: 64px;
   padding: var(--s1) var(--s2); text-align: left;
   font: inherit; color: var(--text); background: var(--surface);
   border: 1px solid var(--border-strong); border-radius: var(--radius); cursor: pointer;
+  transition: transform 120ms ease-out, border-color 120ms ease-out, background-color 120ms ease-out;
+  -webkit-tap-highlight-color: transparent;
 }
-.report-option[data-level="not_full"] { --c: var(--ok); }
-.report-option[data-level="busy"]     { --c: var(--busy); }
-.report-option[data-level="full"]     { --c: var(--full); }
-.report-option:hover:not(:disabled) { background: var(--surface-alt); border-color: var(--text); }
-.report-option:active:not(:disabled) { background: var(--bg); }
-.report-option[aria-pressed="true"] { border: 2px solid var(--c); padding: calc(var(--s1) - 1px) calc(var(--s2) - 1px); }
+.report-option[data-level="not_full"] { --c: var(--ok);   --c-bg: var(--ok-bg); }
+.report-option[data-level="busy"]     { --c: var(--busy); --c-bg: var(--busy-bg); }
+.report-option[data-level="full"]     { --c: var(--full); --c-bg: var(--full-bg); }
+/* Hover is a desktop-only extra; the real feedback is the press, which also works on touch. */
+@media (hover: hover) {
+  .report-option:hover:not(:disabled) { background: var(--surface-alt); border-color: var(--c); }
+}
+/* (1) Press scale */
+.report-option:active:not(:disabled) { transform: scale(.97); }
 .report-option:disabled { opacity: 1; cursor: not-allowed; color: var(--text-muted); background: var(--surface-alt); border-color: var(--border); }
 .report-option__swatch { flex: none; width: var(--s1); align-self: stretch; border-radius: 2px; background: var(--c); }
 .report-option:disabled .report-option__swatch { opacity: .4; }
 .report-option__text { display: grid; }
 .report-option__label { font-weight: 600; }
 .report-option__hint { font-size: 14px; line-height: 20px; color: var(--text-muted); }
+
+/* (3) Fill sweep: the chosen option fills with its status colour from the left. */
+.report-option::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: var(--c-bg); transform: scaleX(0); transform-origin: left;
+}
+.report-option.is-sending::after { transform: scaleX(.35); transition: transform 600ms ease-out; }
+.report-option.is-sent::after { transform: scaleX(1); animation: fill-sweep 400ms ease-out; }
+.report-option.is-sent, .report-option.is-sent:disabled { color: var(--text); background: var(--surface); border: 2px solid var(--c); padding: calc(var(--s1) - 1px) calc(var(--s2) - 1px); }
+.report-option.is-sent .report-option__swatch { opacity: 1; }
+.report-option.is-sent .report-option__hint { color: var(--text); }
+@keyframes fill-sweep { from { transform: scaleX(.35); } to { transform: scaleX(1); } }
+
+/* (4) Checkmark draws itself once the report is accepted. */
+.report-option__check {
+  flex: none; margin-left: auto; width: var(--s3); height: var(--s3);
+  fill: none; stroke: var(--c); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 24; stroke-dashoffset: 24; visibility: hidden;
+}
+.report-option.is-sent .report-option__check { visibility: visible; stroke-dashoffset: 0; animation: check-draw 320ms 250ms ease-out backwards; }
+@keyframes check-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+
+/* (7) Shake when a report is rejected (cooldown or error). The message explains why. */
+.report-options.is-shaking { animation: shake 360ms ease-in-out; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); } 40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(4px); }
+}
+
+/* (5) Cooldown bar: shrinks over the remaining wait; duration is set from JS. */
+.cooldown { height: 4px; margin-top: var(--s2); border-radius: 2px; background: var(--border); overflow: hidden; }
+.cooldown__bar { height: 100%; background: var(--ink); transform-origin: left; animation: cooldown var(--duration, 60s) linear forwards; }
+@keyframes cooldown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* ---- Notices ---- */
 .notice {
@@ -201,7 +277,7 @@ input, textarea {
   border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
 }
 textarea { resize: vertical; min-height: 96px; }
-input:hover, textarea:hover { border-color: var(--text); }
+@media (hover: hover) { input:hover, textarea:hover { border-color: var(--text); } }
 input:focus-visible, textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; border-color: var(--focus); }
 input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--error); }
 .field__help { display: flex; justify-content: space-between; gap: var(--s2); font-size: 12px; line-height: 16px; color: var(--text-muted); }
@@ -216,9 +292,9 @@ button, .btn {
   font: 600 14px/20px var(--font); color: var(--text);
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer;
 }
-button:hover:not(:disabled) { background: var(--surface-alt); border-color: var(--text); }
-.btn--primary, form button[type="submit"]:not(.btn--secondary) { background: var(--ink); color: #fff; border-color: var(--ink); }
-.btn--primary:hover:not(:disabled), form button[type="submit"]:not(.btn--secondary):hover:not(:disabled) { background: var(--ink-hover); border-color: var(--ink-hover); }
+@media (hover: hover) { button:hover:not(:disabled) { background: var(--surface-alt); border-color: var(--text); } }
+.btn--primary, form button[type="submit"]:not(.btn--secondary) { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+@media (hover: hover) { .btn--primary:hover:not(:disabled), form button[type="submit"]:not(.btn--secondary):hover:not(:disabled) { background: var(--ink-hover); border-color: var(--ink-hover); } }
 button:disabled { cursor: not-allowed; opacity: .6; }
 .form .btn { justify-self: start; }
 @media (max-width: 599px) { .form .btn { justify-self: stretch; } }
@@ -248,6 +324,39 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 /* ---- Loading skeleton (respects reduced motion) ---- */
 [aria-busy="true"] .status__label { color: var(--text-muted); }
 
+/* ---- Hero banner (status page) ----
+   The photo is decorative (CSS background, so screen readers skip it). The gradient keeps
+   white text above 9:1 contrast even over the brightest part of the photo. */
+.hero {
+  display: flex; flex-direction: column; justify-content: flex-end;
+  min-height: 200px; margin-bottom: var(--s3); padding: var(--s3) var(--s2);
+  border-radius: var(--radius); color: #fff;
+  background:
+    linear-gradient(to top, var(--hero-shade) 0%, var(--hero-shade) 35%, rgba(24, 19, 14, .30) 100%),
+    url("img/library.jpg") center 55% / cover no-repeat, #3b342c;
+}
+.hero .headline { color: #fff; }
+.hero .supporting { color: #f3eee7; }
+@media (min-width: 600px) { .hero { min-height: 260px; padding: var(--s4) var(--s3); } }
+@media (min-width: 840px) { .hero { min-height: 300px; padding: var(--s5); } }
+
+/* ---- Theme toggle ---- */
+.theme-toggle {
+  width: var(--target); height: var(--target); min-height: 0; padding: 0;
+  border: 0; background: transparent; color: var(--text); border-radius: var(--radius-sm);
+}
+.theme-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.theme-toggle .icon-sun { display: none; }
+[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+@media (hover: hover) { .theme-toggle:hover:not(:disabled) { background: var(--surface-alt); } }
+.app-bar__end { display: flex; align-items: center; gap: var(--s1); }
+@media (max-width: 599px) {
+  .app-bar__end { display: contents; }
+  .theme-toggle { order: 1; margin-right: calc(-1 * var(--s1)); }
+  .nav { order: 2; }
+}
+
 /* ---- Generic lists used by leaderboard/premium/account until they get their own pass ---- */
 .card ul:not([class]), .card ol:not([class]) { padding-left: var(--s3); }
 .card ol:not([class]) li, .card ul:not([class]) li { padding: var(--s1) 0; overflow-wrap: anywhere; }
@@ -255,4 +364,5 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  .cooldown { display: none; }   /* the text countdown still shows the wait */
 }

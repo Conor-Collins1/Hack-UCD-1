@@ -84,3 +84,50 @@ def test_app_js_never_uses_innerhtml(client):
 def test_status_page_renders_when_logged_in(client):
     login(client)
     assert client.get('/').status_code == 200
+
+
+def test_hero_photo_is_served(client):
+    r = client.get('/static/img/library.jpg')
+    assert r.status_code == 200
+    assert r.headers['content-type'] == 'image/jpeg'
+    assert len(r.content) < 400_000  # keep the page light on mobile data
+
+
+@pytest.mark.parametrize('path', PAGES)
+def test_theme_is_set_before_stylesheet_loads(client, path):
+    html = client.get(path).text
+    # The theme script must run in <head> before CSS, or dark-mode users see a white flash.
+    assert html.index('dataset.theme') < html.index('style.css')
+    assert 'id="theme-toggle"' in html and 'aria-pressed=' in html
+
+
+def test_dark_theme_overrides_every_colour_token():
+    from pathlib import Path
+    css = Path(__file__).resolve().parent.parent.joinpath('static', 'style.css').read_text(encoding='utf-8')
+    light = css.split(':root[data-theme="dark"]')[0]
+    dark = css.split(':root[data-theme="dark"]')[1].split('}')[0]
+    colour_tokens = set(re.findall(r'(--[a-z-]+):\s*(?:#|rgba)', light))
+    missing = {t for t in colour_tokens if t + ':' not in dark}
+    assert not missing, f'dark theme is missing {sorted(missing)}'
+
+
+def test_hover_styles_are_limited_to_hover_devices():
+    from pathlib import Path
+    css = Path(__file__).resolve().parent.parent.joinpath('static', 'style.css').read_text(encoding='utf-8')
+    for line in css.splitlines():
+        if ':hover' in line:
+            assert '@media (hover: hover)' in line or line.startswith('  '), line
+
+
+def test_animations_respect_reduced_motion():
+    from pathlib import Path
+    css = Path(__file__).resolve().parent.parent.joinpath('static', 'style.css').read_text(encoding='utf-8')
+    assert '@media (prefers-reduced-motion: reduce)' in css
+    for name in ('fill-sweep', 'check-draw', 'shake', 'cooldown'):
+        assert f'@keyframes {name}' in css
+
+
+def test_status_page_has_animation_hooks(client):
+    html = client.get('/').text
+    assert html.count('class="report-option__check"') == 3
+    assert 'id="cooldown"' in html

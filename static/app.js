@@ -182,14 +182,38 @@ function setSignedIn(user) {
 
 function reportButtons() { return document.querySelectorAll('.report-option'); }
 
+// Restart the cooldown bar's CSS animation so it shrinks over the remaining wait.
+function showCooldownBar(seconds) {
+  const track = $('cooldown');
+  if (!track) return;
+  track.hidden = seconds <= 0;
+  if (seconds <= 0) return;
+  const bar = track.firstElementChild;
+  bar.style.setProperty('--duration', `${seconds}s`);
+  bar.style.animation = 'none';
+  void bar.offsetWidth; // reflow so the animation starts again
+  bar.style.animation = '';
+}
+
+// Shake the options once when a report is rejected. Reduced-motion users get the message only.
+function shakeOptions() {
+  const group = document.querySelector('.report-options');
+  group.classList.remove('is-shaking');
+  void group.offsetWidth;
+  group.classList.add('is-shaking');
+  group.addEventListener('animationend', () => group.classList.remove('is-shaking'), { once: true });
+}
+
 function startCooldown(seconds, message, tone) {
   clearInterval(statusPage.cooldownTimer);
   const notice = $('report-msg');
   let left = Math.max(0, Math.ceil(seconds || 0));
+  showCooldownBar(left);
   const tick = () => {
     if (left <= 0) {
       clearInterval(statusPage.cooldownTimer);
-      reportButtons().forEach(b => { b.disabled = false; b.removeAttribute('aria-pressed'); });
+      reportButtons().forEach(b => { b.disabled = false; b.classList.remove('is-sent', 'is-sending'); });
+      $('cooldown').hidden = true;
       if (message) showNotice(notice, `${message} You can report again now.`, tone);
       return;
     }
@@ -253,17 +277,19 @@ function initStatusPage() {
   reportButtons().forEach(button => {
     button.addEventListener('click', async () => {
       const notice = $('report-msg');
-      reportButtons().forEach(b => { b.disabled = true; b.removeAttribute('aria-pressed'); });
-      button.setAttribute('aria-pressed', 'true');
+      reportButtons().forEach(b => { b.disabled = true; b.classList.remove('is-sent', 'is-sending'); });
+      button.classList.add('is-sending');
       showNotice(notice, 'Sending your report…', 'info');
       try {
         const data = await api('/api/reports', { method: 'POST', body: { level: button.dataset.level } });
         renderStatus(data.status);
+        button.classList.replace('is-sending', 'is-sent');
         announce('Thanks, your report is in.');
         const me = await api('/api/me').catch(() => ({ seconds_until_can_report: 0 }));
         startCooldown(me.seconds_until_can_report, 'Thanks, your report is in.', 'success');
       } catch (e) {
-        button.removeAttribute('aria-pressed');
+        button.classList.remove('is-sending');
+        shakeOptions();
         if (e.status === 429) {
           startCooldown(e.data.retry_after_seconds, 'You reported recently.', 'warning');
         } else if (e.status === 401) {
@@ -375,3 +401,32 @@ async function initAccountPage() {
   });
   $('logout').addEventListener('click', async () => { await api('/api/logout', { method: 'POST' }); location.reload(); });
 }
+
+// ---- Theme toggle (every page) ----
+// base.html sets data-theme before first paint; this just wires the button.
+
+function initThemeToggle() {
+  const button = $('theme-toggle');
+  if (!button) return;
+  const root = document.documentElement;
+  const sync = () => {
+    const dark = root.dataset.theme === 'dark';
+    button.setAttribute('aria-pressed', String(dark));
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = dark ? '#211e1a' : '#fffdfa';
+  };
+  button.addEventListener('click', () => {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('theme', root.dataset.theme); } catch (e) { /* private mode: still works for this page */ }
+    sync();
+  });
+  // Follow the OS setting live, unless the user picked a theme here.
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+    let saved = null;
+    try { saved = localStorage.getItem('theme'); } catch (e) { /* ignore */ }
+    if (!saved) { root.dataset.theme = event.matches ? 'dark' : 'light'; sync(); }
+  });
+  sync();
+}
+
+initThemeToggle();
