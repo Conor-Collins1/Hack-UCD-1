@@ -351,12 +351,105 @@ function initStatusPage() {
 
 // ---- Leaderboard page ----
 
-async function initLeaderboardPage() {
+// Shown only with ?preview=1, and labelled on the page, so the design can be reviewed
+// before scoring is live. Never mixed with real data.
+const SAMPLE_LEADERBOARD = [
+  ['Aoife', 42, 31], ['Cian', 37, 28], ['Niamh', 29, 25], ['Oisín', 21, 19], ['Saoirse', 17, 15],
+  ['Darragh', 12, 11], ['Róisín', 9, 10], ['Conor', 6, 7], ['Méabh', 4, 5], ['Tadhg', 2, 3],
+].map(([name, points, reports_total], i) => ({ rank: i + 1, name, points, reports_total }));
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function plural(n, word) { return `${n} ${word}${n === 1 ? '' : 's'}`; }
+
+function renderResetDate() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const days = Math.max(0, Math.round((end - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000));
+  $('lb-period').textContent = now.toLocaleDateString('en-IE', { month: 'long', year: 'numeric' });
+  const date = end.toLocaleDateString('en-IE', { day: 'numeric', month: 'long' });
+  $('lb-reset').textContent = days === 0 ? `Winners are picked tonight (${date}).` : `Winners picked on ${date}, ${plural(days, 'day')} to go.`;
+}
+
+function renderPodium(top) {
+  const podium = $('podium');
+  podium.replaceChildren(...[1, 2, 3].map(rank => {
+    const row = top.find(r => r.rank === rank);
+    const li = el('li', row ? 'spine' : 'spine spine--open');
+    li.dataset.rank = String(rank);
+    li.append(el('span', 'spine__rank', String(rank)));
+    if (row) {
+      li.append(el('span', 'spine__name', row.name));
+      const pts = el('span', 'spine__points');
+      pts.append(el('strong', '', String(row.points)), document.createTextNode(row.points === 1 ? 'point' : 'points'));
+      li.append(pts, el('span', 'spine__badge', 'Wins Premium'));
+    } else {
+      li.append(el('span', 'spine__name', 'Open spot'), el('span', 'spine__points', 'Could be you'));
+    }
+    return li;
+  }));
+}
+
+function renderCatalogue(rest, leaderPoints) {
+  listItems($('leaderboard'), rest, (li, row) => {
+    const who = el('span', 'catalogue__who');
+    who.append(el('span', 'catalogue__name', row.name), el('span', 'catalogue__meta', plural(row.reports_total, 'report')));
+    const bar = el('span', 'catalogue__bar');
+    const fill = el('span');
+    fill.style.width = `${leaderPoints ? Math.max(4, Math.round(row.points / leaderPoints * 100)) : 0}%`;
+    bar.append(fill);
+    bar.setAttribute('aria-hidden', 'true');
+    who.append(bar);
+    const pts = el('span', 'catalogue__points', String(row.points));
+    pts.append(el('small', '', row.points === 1 ? 'point' : 'points'));
+    const rank = el('span', 'catalogue__rank', String(row.rank));
+    rank.setAttribute('aria-hidden', 'true');   // the <ol> already announces the position
+    li.append(rank, who, pts);
+  });
+}
+
+async function renderYou() {
   try {
-    const data = await api('/api/leaderboard');
-    if (!data.leaderboard.length) { $('leaderboard').textContent = 'Leaderboard scoring is not implemented yet.'; return; }
-    listItems($('leaderboard'), data.leaderboard, (li, row) => { li.textContent = `${row.name} · ${row.points} pts`; });
-  } catch (e) { $('leaderboard').textContent = e.message; }
+    const { user } = await api('/api/me');
+    $('you-signed-in').hidden = false;
+    $('you-points').textContent = String(user.points);
+    $('you-trust').textContent = `${Math.round(user.trust_score * 100)}%`;
+    $('you-plan').textContent = user.is_premium ? 'Premium' : 'Free';
+  } catch (e) {
+    $('you-signed-out').hidden = false;
+  }
+}
+
+async function initLeaderboardPage() {
+  renderResetDate();
+  renderYou();
+  const preview = new URLSearchParams(location.search).get('preview') === '1';
+  let rows = [];
+  try {
+    rows = preview ? SAMPLE_LEADERBOARD : (await api('/api/leaderboard')).leaderboard;
+  } catch (e) {
+    renderPodium([]);
+    $('podium-empty').textContent = `${e.message} The leaderboard will try again when you reload.`;
+    $('podium-empty').hidden = false;
+    $('rest-empty').textContent = "Couldn't load the leaderboard.";
+    $('rest-empty').hidden = false;
+    return;
+  }
+  $('lb-preview').hidden = !preview;
+  renderPodium(rows.slice(0, 3));
+  if (!rows.length) {
+    $('podium-empty').textContent = 'No points yet this month. Reports earn points once they are checked against other students\' reports, about 15 minutes later.';
+    $('podium-empty').hidden = false;
+  }
+  const rest = rows.slice(3);
+  renderCatalogue(rest, rows.length ? rows[0].points : 0);
+  $('rest-empty').textContent = rows.length > 3 ? '' : 'Places 4 to 10 will show up here as more students earn points.';
+  $('rest-empty').hidden = rest.length > 0;
 }
 
 // ---- Premium page ----

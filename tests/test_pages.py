@@ -129,3 +129,33 @@ def test_scale_is_one_gradient_from_green_to_red():
     for step, position in (('not_full', '0 0'), ('busy', '50% 0'), ('full', '100% 0')):
         assert re.search(rf'\.scale li\[data-step="{step}"\]::before\s*\{{ background-position: {position}; \}}', css), step
     assert 'transition: border-color var(--fade)' in css  # status colour fades, doesn't jump
+
+
+def test_leaderboard_page_has_every_element_app_js_needs(client):
+    html = client.get('/leaderboard').text
+    for element_id in ['lb-period', 'lb-reset', 'podium', 'podium-empty', 'lb-preview', 'leaderboard',
+                       'rest-empty', 'you-signed-in', 'you-signed-out', 'you-points', 'you-trust', 'you-plan']:
+        assert f'id="{element_id}"' in html, element_id
+
+
+def test_leaderboard_rest_list_numbers_from_four(client):
+    # Top 3 are on the shelf, so the second list must continue the numbering for screen readers.
+    assert re.search(r'<ol class="catalogue__list" id="leaderboard" start="4">', client.get('/leaderboard').text)
+
+
+def test_leaderboard_explains_how_points_work(client):
+    html = client.get('/leaderboard').text
+    for rule in ('+1', '+3', 'free month of Premium'):
+        assert rule in html
+
+
+def test_leaderboard_sample_data_is_only_for_preview():
+    from pathlib import Path
+    js = Path(__file__).resolve().parent.parent.joinpath('static', 'app.js').read_text(encoding='utf-8')
+    assert "get('preview') === '1'" in js
+    assert "$('lb-preview').hidden = !preview" in js  # sample data is always labelled
+
+
+def test_leaderboard_api_still_matches_contract(client):
+    data = client.get('/api/leaderboard').json()
+    assert isinstance(data['leaderboard'], list)
