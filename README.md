@@ -10,8 +10,7 @@ A web app where students tap one button to report whether the library is **Not f
 
 FastAPI routes, signed demo login, database tables, occupancy calculation (time decay, trust weights,
 hysteresis and trend), report cooldown, comments, pages and PostgreSQL configuration are implemented.
-Trust judgement, automatic leaderboard rewards and payments remain team TODOs. Participation points, live ranks and OpenRouter AI summaries are implemented. Notifications are deferred as a future idea.
-The integration routes return placeholders or explicit unavailable errors until Person 3 implements them.
+Trust judgement and automatic leaderboard rewards remain team TODOs. Participation points, live ranks, OpenRouter AI summaries, one-time sandbox payments and private feedback are implemented. Premium simulated alert triggers and history are implemented; actual delivery is deferred.
 Name/email login does not verify email ownership: use synthetic data until verified authentication is added.
 The prior anonymous prototype database is separate and is not migrated; the app now uses the team's schema.
 
@@ -96,7 +95,7 @@ python scripts/replay.py            # third terminal
 ## How the logic works
 
 ### Database tables
-`users`, `reports` (string levels: not_full / busy / full), `comments`, `status_snapshots`, `payments`, `ai_summaries`, `notifications_sent`. Full schema: CLAUDE.md.
+`users`, `reports` (string levels: not_full / busy / full), `comments`, `status_snapshots`, `payments`, `ai_summaries`, `feedback`, `notification_state`, `notification_events`, `notifications_sent`. Full schema: CLAUDE.md.
 
 ### Status calculation
 - Each report becomes a number: Not full = 0, 80% = 0.8, Full = 1.
@@ -110,8 +109,8 @@ python scripts/replay.py            # third terminal
 - Flag users below 0.3 trust after 5+ reports, or who send repeated reports within 10 minutes.
 - Flagged users see the app normally, but their reports carry zero weight.
 
-### Future idea: notifications
-Notifications may eventually warn students when the library fills or space opens. They are outside the current demo and require no setup or keys.
+### Simulated Premium alerts
+Premium records a getting-busy alert for Not full → ~80% full and a space-opening alert for Full → ~80% full. The Premium page shows persistent shared history. Actual delivery is deferred; no notification service or keys are needed.
 
 ### AI summary (OpenRouter)
 - Reads up to 50 latest visible comments from the past hour. Names and emails are not sent;
@@ -212,3 +211,16 @@ Render's own free PostgreSQL expires after 30 days; Neon is the recommended deve
 
 Free allowances can change. See https://render.com/docs/free and https://neon.com/pricing.
 AI calls are a separate service and are not included in free app hosting.
+
+### Premium alert trigger history
+
+The Premium page explains two alerts: Not full to ~80% full (getting busy), and Full to
+~80% full (space opening up). The backend records those transitions in notification_events,
+with UTC time and a count of active Premium accounts that would receive the alert. This is a
+public shared demo log with no recipient identities. No notification is actually sent.
+
+Transitions are checked before/after accepted reports and when status/history is requested.
+A database singleton lock prevents concurrent polls from duplicating events. Initial status,
+missing reports and stale observations establish a baseline without inventing earlier alerts.
+There is no independent scheduler or offline capture while Render is asleep. Stored history
+survives restarts and deploys in the configured database; no new keys or services are needed.

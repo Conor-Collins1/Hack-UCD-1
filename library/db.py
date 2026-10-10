@@ -110,10 +110,33 @@ feedback = Table(
 )
 
 
+# Singleton serializes transition checks across requests and workers.
+notification_state = Table(
+    'notification_state', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('level', String(10)),
+    Column('observed_at', DateTime(timezone=True)),
+)
+notification_events = Table(
+    'notification_events', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('kind', String(20), nullable=False),
+    Column('from_level', String(10), nullable=False),
+    Column('to_level', String(10), nullable=False),
+    Column('eligible_users', Integer, nullable=False),
+    Column('created_at', DateTime(timezone=True), nullable=False, default=clock.now),
+)
+
+
 def init_db():
     metadata.create_all(engine)
+    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+    from sqlalchemy.dialects.postgresql import insert as postgres_insert
+    statement = postgres_insert if engine.dialect.name == 'postgresql' else sqlite_insert
+    with engine.begin() as conn:
+        conn.execute(statement(notification_state).values(id=1).on_conflict_do_nothing(index_elements=['id']))
 
 
 def reset_db():
     metadata.drop_all(engine)
-    metadata.create_all(engine)
+    init_db()

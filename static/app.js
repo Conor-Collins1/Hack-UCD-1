@@ -456,6 +456,7 @@ async function initLeaderboardPage() {
 // ---- Premium page ----
 
 async function initPremiumPage() {
+  initNotificationHistory();
   const button = $('subscribe');
   const message = $('premium-msg');
   const params = new URLSearchParams(window.location.search);
@@ -586,4 +587,44 @@ async function initFeedbackInbox() {
   });
   try { await load(); }
   catch (e) { if (e.status !== 401) $('inbox-message').textContent = e.message; }
+}
+
+
+async function initNotificationHistory() {
+  const saved = new Map();
+  let nextBefore = null;
+  let initialized = false;
+  let loading = false;
+  async function load(older = false) {
+    if (loading) return;
+    loading = true;
+    $('notification-history-more').disabled = true;
+    try {
+      const data = await api('/api/notifications' + (older && nextBefore ? '?before=' + nextBefore : ''));
+      data.notifications.forEach(event => saved.set(event.id, event));
+      if (!initialized || older) nextBefore = data.next_before;
+      initialized = true;
+      const events = [...saved.values()].sort((a, b) => b.id - a.id);
+      listItems($('notification-history'), events, (li, event) => {
+        li.dataset.kind = event.kind;
+        const heading = el('h3', '', event.title);
+        const timestamp = el('time', 'caption', new Date(event.created_at).toLocaleString());
+        timestamp.dateTime = event.created_at;
+        const message = el('p', '', event.message);
+        const audience = el('p', 'body-muted', `Would notify ${event.eligible_users} Premium account${event.eligible_users === 1 ? '' : 's'} · Not sent`);
+        li.append(heading, timestamp, message, audience);
+      });
+      $('notification-history-message').textContent = events.length ? '' : 'No alert triggers yet. Future changes to ~80% full will appear here.';
+      $('notification-history-more').hidden = !nextBefore;
+    } catch (e) {
+      $('notification-history-message').textContent = 'Could not refresh alert history. Retrying automatically.';
+    } finally {
+      loading = false;
+      $('notification-history-more').disabled = false;
+    }
+  }
+  $('notification-history-more').addEventListener('click', () => load(true));
+  await load();
+  setInterval(() => { if (document.visibilityState === 'visible') load(); }, 10000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(); });
 }

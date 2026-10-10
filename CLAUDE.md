@@ -3,7 +3,7 @@
 You are helping one of three people build **Library Status** for HackUCD 2026 (5-hour build).
 Students tap a button to report whether the UCD library is Not full / ~80% full / Full. The app
 combines reports into a live status, flags people who keep giving false reports, summarises
-comments with AI (OpenRouter), has a sandbox payments page, and has a leaderboard. Notifications are a future idea only.
+comments with AI (OpenRouter), has a sandbox payments page, and has a leaderboard. Premium alert triggers are recorded; actual notification delivery is deferred.
 
 Use the person identified in the conversation (Conor is Person 1); ask only if unknown, then read their plan
 file in `plan/`. The full plan and algorithms are in `README.md`.
@@ -38,8 +38,8 @@ The string levels and existing table/API contracts below remain in place.
 
 ## Simplified demo scope
 
-Person 1 confirmed: keep name/email demo login and the payments page. Notifications are deferred;
-there is no notification setup UI, active endpoint, sending hook, or required notification credential.
+Person 1 confirmed: keep name/email demo login and the payments page. Actual notification delivery is deferred;
+there is no delivery provider, setup UI or required notification credential. Simulated triggers/history are now implemented below.
 The existing database fields/tables are retained for compatibility; no destructive schema change is needed.
 Secrets stay in Render environment settings or local ignored .env, never in tracked files.
 
@@ -95,7 +95,24 @@ Person 1 authorized adopting the visual design from frontend/status-page across 
 Use its warm palette, library hero photo, report animations and bookshelf leaderboard presentation.
 Preserve main's API contracts, +5/+2 participation scoring, shared ranks and personal rank, live refresh,
 AI bullet summaries from the past hour, one-time permanent sandbox Premium and private feedback.
-Do not restore notifications, sample leaderboard data, delayed trust-based points or monthly resets.
+Do not restore notification delivery, sample leaderboard data, delayed trust-based points or monthly resets.
+
+## Premium simulated alerts (Person 1 request)
+
+Person 1 requested occupancy-trigger code, persistent shared history and Premium page explanations.
+Record filling_up for not_full -> busy, space_opening for full -> busy. Use existing categorical
+~80% status, not a new raw-score threshold. First observation is a baseline; no backfill. No alert
+for unchanged levels, direct jumps to full/not_full, missing reports or stale baselines (>45 minutes).
+Each subsequent valid transition is recorded, even with zero eligible users; no sending/cooldown.
+Check before/after accepted reports and during status/history requests. No independent scheduler:
+while the hosted service sleeps, report-derived status is checked on the next request; no offline events invented.
+Serialize observation via singleton notification_state row in the same transaction as event/report.
+New tables: notification_state(id=1,level nullable,observed_at), notification_events(id,kind,from_level,
+to_level,eligible_users,created_at). Existing notifications_sent is retained unused, never populated
+with simulated events. Count only currently active Premium accounts, including permanent access.
+GET /api/notifications?before=id returns {notifications:[{id,kind,from_level,to_level,eligible_users,
+created_at,title,message,delivery:'simulated'}],next_before:int|null}, newest first, 50 per page.
+Public shared history exposes no names, emails or per-user identities. Render creates tables additively.
 
 ## Stack
 
@@ -129,6 +146,8 @@ Display labels and scores live in `library/db.py`: `LEVEL_LABEL`, `LEVEL_SCORE` 
 - **reports**: id, user_id, level, created_at, agreed (NULL until judged)
 - **comments**: id, user_id, text (≤280), created_at, hidden
 - **status_snapshots**: id, level, score, report_count, created_at
+- **notification_state**: id (singleton 1), level (nullable), observed_at
+- **notification_events**: id, kind, from_level, to_level, eligible_users, created_at
 - **notifications_sent**: id, user_id, kind ('filling_up'|'space_opening'), created_at
 - **payments**: id, user_id, stripe_session_id (unique), stripe_subscription_id, amount (cents), currency, status, created_at
 - **ai_summaries**: id, summary_json, comment_count, created_at
@@ -161,6 +180,7 @@ endpoints marked 🔒 return 401 when logged out.
 | `GET /api/comments` | P1 | | `{"comments": [{"id", "text", "name", "created_at"}]}` (latest 30, not hidden) |
 | `POST /api/comments` 🔒 | P1 | `{"text"}` (1–280 chars) | 201 `{"id", "text", "points_awarded"}` |
 | `GET /api/leaderboard` | P1 | | `{"leaderboard": [{"id", "rank", "name", "points", "reports_total"}], "current_user": {"id", "name", "points", "rank", "flagged"}|null, "total_contributors": int}` |
+| `GET /api/notifications?before=` | P3 | optional older cursor | `{"notifications": [simulated alert events], "next_before": int|null}` |
 | `GET /api/summary` | P3 | | `Summary` |
 | `POST /api/checkout` 🔒 | P3 | | `{"url"}` (Stripe Checkout URL) |
 | `GET /api/checkout/confirm?session_id=` 🔒 | P3 | | `{"user": User}` once paid |

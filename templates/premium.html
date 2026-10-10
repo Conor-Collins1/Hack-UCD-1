@@ -1,13 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Premium · Library Status{% endblock %}
 {% block content %}
-<section class="card">
+<section class="card premium-intro">
+  <p class="eyebrow">Plan your library visit</p>
   <h1>Premium · €1.99 once</h1>
   <p>Unlock Premium permanently with a one-time sandbox payment.</p>
-  <p class="muted">Notifications are a future idea and are not included in this demo.</p>
+  <div class="premium-alerts">
+    <article class="premium-alert">
+      <span class="tag">Getting busy</span>
+      <h2>Know when it reaches ~80% full</h2>
+      <p>Get an alert when the library moves from Not full to ~80% full, so you can head over before seats become harder to find.</p>
+    </article>
+    <article class="premium-alert">
+      <span class="tag">Space opening up</span>
+      <h2>Know when Full drops to ~80%</h2>
+      <p>Get an alert when the library moves from Full back to ~80% full, so you know it may be worth checking for a seat.</p>
+    </article>
+  </div>
+  <p class="notice" data-tone="info">Demo preview: alert triggers are recorded below. Phone, email and push notifications are not sent yet. Occupancy is an estimate from student reports.</p>
   <button id="subscribe">Unlock Premium · €1.99</button>
   <p id="premium-msg" role="status" aria-live="polite"></p>
   <p class="muted">Test mode: no real payments are taken.</p>
+</section>
+<section class="card" aria-labelledby="notification-history-title">
+  <div class="card__header">
+    <h2 id="notification-history-title">Alert history</h2>
+    <span class="tag">Simulated alerts</span>
+  </div>
+  <p class="body-muted">A shared record of alerts that would have been sent to eligible Premium accounts. New triggers are saved from now on and kept across visits. Refreshes every 10 seconds.</p>
+  <p id="notification-history-message" role="status" aria-live="polite">Loading alert history…</p>
+  <ol id="notification-history" class="notification-history" aria-label="Recorded alert triggers"></ol>
+  <button id="notification-history-more" hidden>Load older alerts</button>
 </section>
 {% endblock %}
 {% block scripts %}<script>initPremiumPage();</script>{% endblock %}
