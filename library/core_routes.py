@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from library.http import json_body, response
 from sqlalchemy import func, insert, select
 
-from library import clock, status, trust
+from library import clock, status, trust, notify
 from library.auth import current_user, require_user, user_json
 from library.db import LEVELS, comments, engine, reports, users
 
@@ -47,16 +47,17 @@ def me(request: Request, user_id: int = Depends(require_user)):
 
 @router.get('/status')
 def get_status(request: Request):
-    with engine.connect() as conn:
-        return response(status.compute_status(conn))
+    with engine.begin() as conn:
+        return response(notify.capture_status(conn))
 
 
 def _submit_report(conn, user_id, level):
     """Shared by the real endpoint and the demo endpoint."""
+    notify.capture_status(conn)  # establish the pre-report baseline under the same lock
     conn.execute(insert(reports).values(user_id=user_id, level=level, created_at=clock.now()))
     points_awarded = trust.award_points(conn, user_id, trust.REPORT_POINTS)
     trust.judge_pending_reports(conn)
-    new = status.compute_status(conn)
+    new = notify.capture_status(conn)
     status.save_snapshot(conn, new)
     return new, points_awarded
 
@@ -220,3 +221,11 @@ def feedback_inbox(request: Request, before: int = 0):
         rows = conn.execute(query.order_by(feedback.c.id.desc()).limit(51)).mappings().all()
         items = [{**row, 'created_at': clock.as_utc(row['created_at']).isoformat()} for row in rows[:50]]
     return {'feedback': items, 'next_before': items[-1]['id'] if len(rows) > 50 else None}
+
+
+@router.get('/notifications')
+def notification_history(before: int = 0):
+    """Public demo log, with aggregate counts only; never recipient identities."""
+    with engine.begin() as conn:
+        notify.capture_status(conn)
+        return notify.history(conn, before)

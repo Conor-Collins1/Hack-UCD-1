@@ -1,26 +1,53 @@
-"""Premium alerts via ntfy.sh. OWNER: Person 3.
+"""Record simulated Premium alert triggers. No delivery service is called."""
+from datetime import timedelta
+from sqlalchemy import func, insert, or_, select, update
+from library import clock
+from library.db import notification_events, notification_state, users
 
-Called by core_routes.py after every new report, with the status before and after.
-- 'filling_up': new status not full, and score + trend_per_min * LOOKAHEAD_MINUTES >= 0.9.
-- 'space_opening': previous level was 'full' and the new level is 'busy' or 'not_full'.
-- Send each kind to each premium user (with an ntfy_topic) at most once per COOLDOWN_MINUTES;
-  record every send in notifications_sent.
-- Never raise: a failed send must not break report submission. Log and carry on.
-"""
-import os
-
-NTFY_SERVER = os.environ.get('NTFY_SERVER', 'https://ntfy.sh')
-LOOKAHEAD_MINUTES = 15
-COOLDOWN_MINUTES = 60
+MESSAGES = {
+    'filling_up': ('The library is getting busy', 'The library has reached ~80% full. Head over soon if you need a seat.'),
+    'space_opening': ('Seats may be opening up', 'The library has dropped from Full to ~80% full. It may be a good time to check for a seat.'),
+}
 
 
-def check_and_send(conn, previous_status, new_status):
-    """Decide whether to alert, and send. Return a list of kinds sent (for logs/tests).
+def capture_status(conn):
+    """Compute and observe under a database lock, in the caller's transaction.
 
-    TODO(Person 3)
+    The first observation is a baseline, never an invented historical transition.
+    Missing/stale report windows break the chain so expiry cannot look like freed seats.
+    Each real re-entry into busy is recorded, without a cooldown or duplicate polls.
     """
-    return []
+    from library.status import compute_status, WINDOW_MINUTES
+    conn.execute(update(notification_state).where(notification_state.c.id == 1).values(id=1))
+    state = conn.execute(select(notification_state).where(notification_state.c.id == 1)).mappings().one()
+    current = compute_status(conn)
+    now = clock.now()
+    level = current['level'] if current['report_count'] else None
+    previous = state['level']
+    observed = clock.as_utc(state['observed_at']) if state['observed_at'] else None
+    fresh = observed is not None and now - timedelta(minutes=WINDOW_MINUTES) <= observed <= now
+    kind = None
+    if fresh and level == 'busy':
+        if previous == 'not_full':
+            kind = 'filling_up'
+        elif previous == 'full':
+            kind = 'space_opening'
+    if kind:
+        eligible = conn.scalar(select(func.count()).select_from(users).where(
+            users.c.is_premium.is_(True),
+            or_(users.c.premium_until.is_(None), users.c.premium_until > now)))
+        conn.execute(insert(notification_events).values(kind=kind, from_level=previous,
+            to_level=level, eligible_users=eligible, created_at=now))
+    conn.execute(update(notification_state).where(notification_state.c.id == 1).values(level=level, observed_at=now))
+    return current
 
 
-def send(topic, title, message):
-    """POST one alert to ntfy. TODO(Person 3): requests.post(f'{NTFY_SERVER}/{topic}', ...)"""
+def history(conn, before=0):
+    query = select(notification_events)
+    if before > 0:
+        query = query.where(notification_events.c.id < before)
+    rows = conn.execute(query.order_by(notification_events.c.id.desc()).limit(51)).mappings().all()
+    events = [{**row, 'created_at': clock.as_utc(row['created_at']).isoformat(),
+               'title': MESSAGES[row['kind']][0], 'message': MESSAGES[row['kind']][1],
+               'delivery': 'simulated'} for row in rows[:50]]
+    return {'notifications': events, 'next_before': events[-1]['id'] if len(rows) > 50 else None}

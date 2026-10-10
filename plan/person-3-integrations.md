@@ -4,7 +4,7 @@
 
 > AI summary implementation is complete: cached, bounded input, validated JSON, moderation IDs, timeout/backoff, and stale fallback. Stripe remains future work.
 
-> Updated scope: keep demo login and the sandbox payments page. Notifications are a future idea only; notification tasks below are deferred.
+> Updated scope: keep demo login and the sandbox payments page. Simulated Premium alert triggers and persistent history are implemented. Actual notification delivery tasks below remain deferred.
 
 # Person 3: Integrations (AI and Stripe)
 
