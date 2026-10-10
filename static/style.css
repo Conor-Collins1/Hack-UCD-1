@@ -525,3 +525,5 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   .comments-card > :not(#comments) { flex: none; }
   .comments-card #comments { flex: 1 1 auto; min-height: 0; max-height: none; }
 }
+
+.feedback-card { margin-top: var(--s3); margin-bottom: var(--s3); }
