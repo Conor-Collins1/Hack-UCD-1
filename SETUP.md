@@ -1,21 +1,40 @@
-# First working version
+# Run the FastAPI app
 
-This branch implements the core demo: a responsive page, anonymous signed browser sessions, SQLite storage, occupancy reports with time decay, comments, input validation, and per-session cooldowns.
+## Windows
 
-## Run locally on Windows
+Create a Python 3.12 environment (`python -m venv .venv`), then:
 
-1. Create the environment: `python -m venv .venv`
-2. Install: `.venv\Scripts\python -m pip install -r requirements.txt`
-3. Start: `.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000`
-4. Open http://127.0.0.1:8000 or http://127.0.0.1:8000/docs.
-5. Test: `.venv\Scripts\python -m pytest -q`
+```
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python -m uvicorn app.main:app --reload
+```
 
-The local session secret is temporary, so restarting resets browser identities unless SESSION_SECRET is configured. The app reads environment variables directly; .env.example documents them but .env is not automatically loaded.
+Open http://127.0.0.1:8000. Log in with a synthetic name/email on /account before reporting.
+API docs: /docs. Tests: `.venv\Scripts\python -m pytest -q`.
 
-## Online deployment requirements
+Copy .env.example to .env for local settings; the app loads it automatically.
+Set a stable random SESSION_SECRET so sessions survive restarts.
+Tables are created automatically at startup. Local data lives in instance/library.db.
 
-Use one Python app instance, HTTPS, and a persistent disk. Set APP_ENV=production, a random SESSION_SECRET, PUBLIC_URL to the exact website origin, and DATABASE_PATH to a file on that disk. Install requirements and start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Do not deploy SQLite onto an ephemeral filesystem. Multi-instance hosting will require moving to a shared database.
+## Database commands
 
-## Scope and next steps
+`python -m library.cli init-db` creates missing tables.
+`python -m library.cli reset-db --confirm-reset` deletes all data; use only a disposable demo database.
+`python -m library.cli reward-top` is reserved for Person 1's future reward implementation.
 
-This is a hackathon foundation, not the complete README plan. AI summaries, verified login, trust scoring, hysteresis, leaderboard, Stripe subscriptions, notifications, and replay are not implemented yet. Anonymous cooldowns can be bypassed by clearing cookies; add verified identity and server-side abuse controls before public use. Comments are publicly visible and not moderated yet; use synthetic demo data until moderation is added. No external keys are needed for this version.
+## Free online deployment
+
+Use Render Free for the web app and Neon Free for PostgreSQL. Follow README.md for exact settings.
+Do not deploy local SQLite to Render Free: local files disappear on restarts and redeploys.
+Choose a Python runtime, build `pip install -r requirements.txt`, start
+`uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check /health.
+Set APP_ENV=production, SESSION_SECRET (random, 32+ characters), PUBLIC_URL (HTTPS origin),
+DATABASE_URL (hosted PostgreSQL URL), DEMO_MODE=0 and DEMO_SPEED=1.
+
+## Migration for teammates
+
+Pull main, reinstall requirements, and use Uvicorn. App entry point is app.main:app;
+routes use APIRouter, templates use Starlette's Jinja2 integration, tests use TestClient.
+The string level values, table schema, endpoint URLs and documented JSON formats are retained.
+Person 2 owns templates/static; Person 3 owns AI/payments/notifications. Those services remain TODOs.
+No real user data or secrets were migrated from the anonymous prototype.

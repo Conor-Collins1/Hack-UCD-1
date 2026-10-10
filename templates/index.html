@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="eyebrow">Less wandering. More studying.</div><h1>Find your space.<br>Before you walk.</h1><p class="intro">Student reports help you check the crowd before heading to the library. <a href="/account">Sign in to share an update.</a></p>
+<section class="card">
+  <h1>Is the library full?</h1>
+  <p id="status-label" class="status" role="status" aria-live="polite">Loading…</p>
+  <p id="status-meta" class="muted"></p>
+</section>
+
+<section class="card">
+  <h2>What's it like right now?</h2>
+  <div class="buttons">
+    <button data-level="not_full">Not full</button>
+    <button data-level="busy">~80% full</button>
+    <button data-level="full">Full</button>
+  </div>
+  <p id="report-msg" role="status" aria-live="polite"></p>
+</section>
+
+<section class="card">
+  <h2>What people are saying</h2>
+  <p id="summary" class="muted">Loading…</p>
+  <ul id="themes" class="chips"></ul>
+</section>
+
+<section class="card">
+  <h2>Comments</h2>
+  <form id="comment-form">
+    <input id="comment" maxlength="280" required placeholder="e.g. Plenty of seats on floor 2">
+    <button type="submit">Post</button>
+  </form>
+  <p id="comment-msg" role="status" aria-live="polite"></p>
+  <ul id="comments"></ul>
+</section>
+{% endblock %}
+{% block scripts %}<script>initStatusPage();</script>{% endblock %}

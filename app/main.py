@@ -1,132 +1,85 @@
-import math
+"""FastAPI entry point. OWNER: Person 1."""
+import logging
 import os
 import secrets
-import sqlite3
-import time
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+load_dotenv()
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from starlette.exceptions import HTTPException
 from starlette.middleware.sessions import SessionMiddleware
+from library import core_routes, db, integration_routes, pages
 
-ROOT = Path(__file__).resolve().parent
-DATABASE = os.environ.get('DATABASE_PATH', str(ROOT.parent / 'library.db'))
-SESSION_SECRET = os.environ.get('SESSION_SECRET')
-if os.environ.get('APP_ENV') == 'production' and not SESSION_SECRET:
-    raise RuntimeError('Set SESSION_SECRET before running in production')
-SESSION_SECRET = SESSION_SECRET or secrets.token_urlsafe(48)
-
-@contextmanager
-def database():
-    connection = sqlite3.connect(DATABASE, timeout=10)
-    connection.row_factory = sqlite3.Row
-    try:
-        yield connection
-        connection.commit()
-    finally:
-        connection.close()
+ROOT = Path(__file__).resolve().parent.parent
+production = os.environ.get('APP_ENV') == 'production'
+secret = os.environ.get('SESSION_SECRET') or os.environ.get('SECRET_KEY')
+if production and (not secret or len(secret) < 32 or secret.startswith(('replace-', 'change-me'))):
+    raise RuntimeError('Set SESSION_SECRET to a random value of at least 32 characters.')
+if production and os.environ.get('DEMO_MODE') == '1':
+    raise RuntimeError('Demo endpoints must be disabled in production.')
+if production and os.environ.get('DEMO_SPEED', '1') != '1':
+    raise RuntimeError('Use DEMO_SPEED=1 in production.')
+if production and not os.environ.get('PUBLIC_URL', '').startswith('https://'):
+    raise RuntimeError('Set PUBLIC_URL to your HTTPS website origin.')
 
 @asynccontextmanager
 async def lifespan(app):
-    with database() as db:
-        db.executescript('''
-        CREATE TABLE IF NOT EXISTS reports (
-          id INTEGER PRIMARY KEY, visitor TEXT NOT NULL,
-          level INTEGER NOT NULL CHECK(level IN (0,1,2)), created REAL NOT NULL);
-        CREATE INDEX IF NOT EXISTS reports_created ON reports(created);
-        CREATE INDEX IF NOT EXISTS reports_visitor ON reports(visitor, created);
-        CREATE TABLE IF NOT EXISTS comments (
-          id INTEGER PRIMARY KEY, visitor TEXT NOT NULL,
-          body TEXT NOT NULL, created REAL NOT NULL);
-        CREATE INDEX IF NOT EXISTS comments_created ON comments(created);
-        ''')
+    db.init_db()
     yield
 
 app = FastAPI(title='Library Status API', lifespan=lifespan)
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET,
-                   same_site='lax', https_only=os.environ.get('APP_ENV') == 'production')
 
-class Report(BaseModel):
-    level: int = Field(strict=True, ge=0, le=2)
+@app.middleware('http')
+async def request_limits(request: Request, call_next):
+    if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        origin = request.headers.get('origin')
+        expected = os.environ.get('PUBLIC_URL') or str(request.base_url).rstrip('/')
+        if request.url.path != '/webhooks/stripe' and origin and origin.rstrip('/') != expected.rstrip('/'):
+            return JSONResponse({'error': 'Please submit from the app website.'}, status_code=403)
+        # Check actual bytes too: Content-Length alone can be omitted or incorrect.
+        total = 0
+        chunks = []
+        async for chunk in request.stream():
+            total += len(chunk)
+            chunks.append(chunk)
+            if total > 65536:
+                return JSONResponse({'error': 'Request is too large.'}, status_code=413)
+        request._body = b''.join(chunks)
+    return await call_next(request)
 
-class Comment(BaseModel):
-    body: str = Field(min_length=1, max_length=500)
+app.add_middleware(SessionMiddleware, secret_key=secret or secrets.token_urlsafe(48),
+                   same_site='lax', https_only=production)
+app.mount('/static', StaticFiles(directory=str(ROOT / 'static')), name='static')
+app.include_router(core_routes.router)
+app.include_router(integration_routes.router)
+app.include_router(pages.router)
 
-def visitor(request):
-    if 'visitor' not in request.session:
-        request.session['visitor'] = secrets.token_urlsafe(24)
-    return request.session['visitor']
+@app.exception_handler(HTTPException)
+async def http_error(request, error):
+    return JSONResponse({'error': str(error.detail)}, status_code=error.status_code, headers=error.headers)
 
-def check_origin(request):
-    origin = request.headers.get('origin')
-    expected = os.environ.get('PUBLIC_URL', str(request.base_url).rstrip('/'))
-    if origin and origin.rstrip('/') != expected.rstrip('/'):
-        raise HTTPException(403, 'Please submit from the app website.')
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request, error):
+    return JSONResponse({'error': 'Please check your input and try again.'}, status_code=400)
 
-def calculate_status(rows, now):
-    if not rows:
-        return dict(level=None, label='No recent reports', score=None, report_count=0,
-                    confidence='Be the first to report', latest_report_at=None)
-    weights = [math.pow(0.5, max(0, now-r['created'])/900) for r in rows]
-    score = sum((0, .8, 1)[r['level']]*w for r,w in zip(rows,weights))/sum(weights)
-    level = 2 if score >= .9 else 1 if score >= .5 else 0
-    recent = sum(r['created'] >= now-1200 for r in rows)
-    return dict(level=level, label=('Not full','Around 80% full','Full')[level],
-                score=round(score,3), report_count=len(rows),
-                confidence=f'Based on {recent} reports in the last 20 minutes',
-                latest_report_at=max(r['created'] for r in rows))
-
-@app.get('/', include_in_schema=False)
-def home():
-    return FileResponse(ROOT / 'index.html')
+@app.exception_handler(SQLAlchemyError)
+async def database_error(request, error):
+    logging.getLogger(__name__).error('Database request failed: %s', type(error).__name__)
+    return JSONResponse({'error': 'Database unavailable. Please try again later.'}, status_code=503)
 
 @app.get('/health')
 def health():
-    with database() as db:
-        db.execute('SELECT 1')
-    return {'status':'ok'}
-
-@app.get('/api/status')
-def status(request: Request):
-    visitor(request)
-    now = time.time()
-    with database() as db:
-        rows = db.execute('SELECT level, created FROM reports WHERE created >= ?', (now-2700,)).fetchall()
-    return calculate_status(rows, now)
-
-@app.post('/api/reports', status_code=201)
-def report(payload: Report, request: Request):
-    check_origin(request)
-    identity = visitor(request)
-    now = time.time()
-    with database() as db:
-        db.execute('BEGIN IMMEDIATE')
-        latest = db.execute('SELECT MAX(created) FROM reports WHERE visitor=?',(identity,)).fetchone()[0]
-        if latest is not None and now-latest < 600:
-            raise HTTPException(429, 'Thanks! You can report again in 10 minutes.')
-        db.execute('INSERT INTO reports(visitor,level,created) VALUES(?,?,?)',(identity,payload.level,now))
-    return {'message':'Report saved. Thank you!'}
-
-@app.get('/api/comments')
-def comments():
-    with database() as db:
-        rows = db.execute('SELECT id,body,created FROM comments WHERE created>=? ORDER BY created DESC LIMIT 50', (time.time()-7200,)).fetchall()
-    return {'comments':[dict(r) for r in rows]}
-
-@app.post('/api/comments', status_code=201)
-def comment(payload: Comment, request: Request):
-    check_origin(request)
-    body = payload.body.strip()
-    if not body:
-        raise HTTPException(422, 'Please write a comment first.')
-    identity = visitor(request)
-    now = time.time()
-    with database() as db:
-        db.execute('BEGIN IMMEDIATE')
-        latest = db.execute('SELECT MAX(created) FROM comments WHERE visitor=?',(identity,)).fetchone()[0]
-        if latest is not None and now-latest < 60:
-            raise HTTPException(429, 'Please wait a minute before commenting again.')
-        db.execute('INSERT INTO comments(visitor,body,created) VALUES(?,?,?)',(identity,body,now))
-    return {'message':'Comment saved.'}
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text('SELECT 1'))
+    except SQLAlchemyError:
+        return JSONResponse({'error': 'Database unavailable.', 'status': 'unavailable', 'database': 'unavailable'}, status_code=503)
+    return {'status': 'ok', 'database': 'connected'}
