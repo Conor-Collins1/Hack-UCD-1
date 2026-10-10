@@ -51,7 +51,7 @@ def create_checkout_session(user, base_url):
     if price.get('livemode') is not False or price.get('type') != 'one_time' or not price.get('active') or price.get('unit_amount') != 199 or price.get('currency') != 'eur':
         raise PaymentError('Configure an active sandbox one-time price of EUR 1.99.', 503)
     session = client.v1.checkout.sessions.create({
-        'mode': 'payment', 'payment_method_types': ['card'],
+        'mode': 'payment',  # payment methods come from Dashboard settings; Stripe rejects payment_method_types
         'line_items': [{'price': price_id(), 'quantity': 1}],
         'client_reference_id': str(user['id']),
         'metadata': {'purpose': 'library_premium', 'price_id': price_id()},

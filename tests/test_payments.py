@@ -55,6 +55,8 @@ def test_one_time_checkout(client, provider):
     assert args['client_reference_id'] == str(identity)
     assert args['line_items'] == [{'price': 'price_premium', 'quantity': 1}]
     assert '{CHECKOUT_SESSION_ID}' in args['success_url']
+    # Stripe now rejects this parameter (payment methods are set in the Dashboard).
+    assert 'payment_method_types' not in args
 
 
 def test_paid_confirmation_is_permanent_and_idempotent(client, provider):
