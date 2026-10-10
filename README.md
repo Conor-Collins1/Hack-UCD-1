@@ -247,3 +247,11 @@ Log in with a demo identity, open Premium and use sandbox card `4242 4242 4242 4
 expiry and any three-digit CVC. Completing payment upgrades that account permanently; cancellations
 and unpaid sessions do not. Reload Account to see Premium. Replaying confirmation or webhook
 creates no duplicate payment rows. This remains a sandbox demo with unverified name/email login.
+
+### Private user feedback
+
+Signed-in users can send feedback from the small form on the status page. Messages are saved
+in the existing database in the new feedback table (created automatically on startup).
+Set a random `FEEDBACK_ADMIN_PASSWORD` of at least 32 characters in Render and redeploy.
+Your team can then open `/feedback` and unlock the private inbox with that password.
+Feedback is newest-first with older-page loading. Do not commit or share the password publicly.

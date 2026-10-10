@@ -158,3 +158,65 @@ def _demo_user(conn, email, name):
     if user_id is None:
         user_id = conn.execute(insert(users).values(name=name, email=email)).inserted_primary_key[0]
     return user_id
+
+
+# Team feedback inbox uses a separate credential: demo identities are not verified.
+def feedback_admin_digest():
+    import hashlib
+    secret = os.environ.get('FEEDBACK_ADMIN_PASSWORD', '')
+    if len(secret) < 32:
+        return None
+    return hashlib.sha256(secret.encode()).hexdigest()
+
+
+@router.post('/feedback')
+def submit_feedback(request: Request, user_id: int = Depends(require_user), data: dict = Depends(json_body)):
+    from library.db import feedback
+    message = data.get('message')
+    if not isinstance(message, str) or not 1 <= len(message.strip()) <= 2000:
+        return JSONResponse({'error': 'Enter feedback between 1 and 2,000 characters.'}, status_code=400)
+    with engine.begin() as conn:
+        trust.lock_user(conn, user_id)
+        latest = conn.execute(select(feedback.c.created_at).where(feedback.c.user_id == user_id)
+                              .order_by(feedback.c.created_at.desc()).limit(1)).scalar()
+        if latest and (clock.now() - clock.as_utc(latest)).total_seconds() < 60:
+            return JSONResponse({'error': 'Please wait a minute before sending more feedback.'}, status_code=429)
+        conn.execute(insert(feedback).values(user_id=user_id, message=message.strip(), created_at=clock.now()))
+    return JSONResponse({'ok': True}, status_code=201)
+
+
+@router.post('/feedback/access')
+def feedback_access(request: Request, data: dict = Depends(json_body)):
+    import hashlib
+    import secrets
+    digest = feedback_admin_digest()
+    if digest is None:
+        return JSONResponse({'error': 'The team feedback password has not been configured yet.'}, status_code=503)
+    password = data.get('password')
+    if not isinstance(password, str) or not secrets.compare_digest(hashlib.sha256(password.encode()).hexdigest(), digest):
+        return JSONResponse({'error': 'Incorrect team password.'}, status_code=403)
+    request.session['feedback_access'] = digest
+    return {'ok': True}
+
+
+@router.post('/feedback/lock')
+def feedback_lock(request: Request):
+    request.session.pop('feedback_access', None)
+    return {'ok': True}
+
+
+@router.get('/feedback')
+def feedback_inbox(request: Request, before: int = 0):
+    import secrets
+    from library.db import feedback
+    digest = feedback_admin_digest()
+    saved = request.session.get('feedback_access', '')
+    if digest is None or not isinstance(saved, str) or not secrets.compare_digest(saved, digest):
+        return JSONResponse({'error': 'Unlock the inbox with your team password.'}, status_code=401)
+    with engine.connect() as conn:
+        query = select(feedback.c.id, feedback.c.message, feedback.c.created_at, users.c.name).join(users)
+        if before > 0:
+            query = query.where(feedback.c.id < before)
+        rows = conn.execute(query.order_by(feedback.c.id.desc()).limit(51)).mappings().all()
+        items = [{**row, 'created_at': clock.as_utc(row['created_at']).isoformat()} for row in rows[:50]]
+    return {'feedback': items, 'next_before': items[-1]['id'] if len(rows) > 50 else None}

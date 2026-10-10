@@ -78,6 +78,17 @@ check account ownership, sandbox status, product purpose and actual line-item pr
 Never accept live keys/events. Existing endpoint shapes and tables stay unchanged. days=None in
  grant_premium means permanent; timed leaderboard rewards must preserve permanent access.
 
+## Private feedback (Person 1 request)
+
+Person 1 authorized feedback submission, database storage and a separate team inbox across modules.
+New feedback table: id, user_id, message (1-2000 chars), created_at. Created additively at startup.
+POST /api/feedback requires demo login, returns 201 {ok:true}, with a one-minute per-user cooldown.
+GET /api/feedback returns {feedback:[{id,message,created_at,name}],next_before:int|null}; 50 per page,
+using ?before=id for older items. Team access uses POST /api/feedback/access {password}, a signed
+session and FEEDBACK_ADMIN_PASSWORD (32+ characters). POST /api/feedback/lock removes access.
+GET /feedback serves the inbox shell only; all feedback data requires team access. Email allowlists
+are unsuitable because demo login does not verify identity. No feedback points or public listing.
+
 ## Stack
 
 FastAPI + Uvicorn + SQLAlchemy Core (no ORM) · SQLite locally, hosted Postgres via `DATABASE_URL` on

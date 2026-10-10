@@ -21,3 +21,8 @@ def premium(request: Request):
 @router.get('/account', include_in_schema=False)
 def account(request: Request):
     return templates.TemplateResponse(request=request, name='account.html')
+
+
+@router.get('/feedback', include_in_schema=False)
+def feedback_page(request: Request):
+    return templates.TemplateResponse(request=request, name='feedback.html')
