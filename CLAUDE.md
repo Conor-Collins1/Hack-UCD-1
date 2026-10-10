@@ -53,6 +53,12 @@ Flagged users earn no points and are excluded. Rank by total points; ties share 
 monthly reset or automatic premium rewards. Demo replay also awards points, and bypasses cooldowns.
 Trust judgement must not award the old agreement/first-reporter bonus on top of participation points.
 
+## Leaderboard prize display (Person 1 request)
+
+Person 1 requested frontend highlighting: the top 3 people will each win one month of Premium free.
+Display the prize banner and mark current ranks 1-3, including shared ranks under existing tie rules.
+This announces the prize; automatic grants, award timing and point resets remain future work.
+
 ## AI summary implementation (Person 1 request)
 
 Person 1 requested implementation of the existing AI integration across owned modules.

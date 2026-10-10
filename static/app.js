@@ -346,12 +346,22 @@ async function initLeaderboardPage() {
       listItems($('leaderboard'), data.leaderboard, (li, row) => {
         const isYou = data.current_user && data.current_user.id === row.id;
         li.dataset.you = String(!!isYou);
+        li.dataset.prize = String(row.rank >= 1 && row.rank <= 3);
         li.value = row.rank;
         const name = document.createElement('strong');
         name.textContent = `#${row.rank} ${row.name}${isYou ? ' (you)' : ''}`;
         const points = document.createElement('span');
         points.textContent = `${row.points} points`;
-        li.append(name, points);
+        const details = document.createElement('div');
+        details.className = 'ranking-details';
+        details.append(points);
+        if (row.rank >= 1 && row.rank <= 3) {
+          const prize = document.createElement('span');
+          prize.className = 'ranking-prize';
+          prize.textContent = 'Top 3 · 1 month Premium free';
+          details.append(prize);
+        }
+        li.append(name, details);
       });
       if (!data.leaderboard.length) $('leaderboard').textContent = 'No points yet. Be the first to contribute!';
     } catch (e) { $('leaderboard-error').textContent = 'Could not refresh the leaderboard. Retrying automatically.'; }
