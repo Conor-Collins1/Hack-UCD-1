@@ -256,3 +256,6 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+
+/* Ranked community contributions */
+.community-ranking{list-style:none;padding:0}.community-ranking li{display:flex;justify-content:space-between;gap:16px;padding:18px 12px;border-bottom:1px solid var(--line,#dee5d8);overflow-wrap:anywhere}.community-ranking li[data-you="true"]{background:var(--surface-soft,#edf4e8);border-radius:12px}.community-ranking li strong{min-width:0}.community-ranking li span{white-space:nowrap}

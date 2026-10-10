@@ -22,9 +22,11 @@ def require_user(request: Request):
     return user['id']
 
 
-def user_json(user):
+def user_json(user, conn=None):
     """Public shape of a user, used by GET /api/me (see CLAUDE.md)."""
+    from library.trust import rank_for_user
     return {
+        'rank': rank_for_user(conn, user['id']) if conn is not None else None,
         'id': user['id'],
         'name': user['name'],
         'email': user['email'],

@@ -1,3 +1,5 @@
+> Participation scoring now implemented: +5 per report, +2 per comment; live leaderboard and personal rank. Trust judgement and premium rewards remain separate future work. Old agreement-based bonus tasks below are superseded.
+
 > Updated scope: keep demo login and the sandbox payments page. Notifications are a future idea only; notification tasks below are deferred.
 
 # Person 1: Core backend

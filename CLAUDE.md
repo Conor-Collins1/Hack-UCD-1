@@ -43,6 +43,16 @@ there is no notification setup UI, active endpoint, sending hook, or required no
 The existing database fields/tables are retained for compatibility; no destructive schema change is needed.
 Secrets stay in Render environment settings or local ignored .env, never in tracked files.
 
+## Participation scoring (Person 1 request)
+
+Implement the requested leaderboard across backend and UI: +5 per accepted report, +2 per new comment.
+Award points in the contribution transaction. Reports retain the ten-minute cooldown; comments have a
+one-minute cooldown and same-user duplicate rejection for two hours (case/whitespace insensitive).
+Flagged users earn no points and are excluded. Rank by total points; ties share competition rank
+(1, 1, 3). Only positive scores are ranked. Scores start from new contributions, with no backfill,
+monthly reset or automatic premium rewards. Demo replay also awards points, and bypasses cooldowns.
+Trust judgement must not award the old agreement/first-reporter bonus on top of participation points.
+
 ## Stack
 
 FastAPI + Uvicorn + SQLAlchemy Core (no ORM) · SQLite locally, hosted Postgres via `DATABASE_URL` on
@@ -103,10 +113,10 @@ endpoints marked 🔒 return 401 when logged out.
 | `POST /api/logout` | P1 | | `{"ok": true}` |
 | `GET /api/me` 🔒 | P1 | | `{"user": User, "seconds_until_can_report": int}` |
 | `GET /api/status` | P1 | | `Status` |
-| `POST /api/reports` 🔒 | P1 | `{"level"}` | 201 `{"status": Status}` · 429 `{"error", "retry_after_seconds"}` |
+| `POST /api/reports` 🔒 | P1 | `{"level"}` | 201 `{"status": Status, "points_awarded": int}` · 429 `{"error", "retry_after_seconds"}` |
 | `GET /api/comments` | P1 | | `{"comments": [{"id", "text", "name", "created_at"}]}` (latest 30, not hidden) |
-| `POST /api/comments` 🔒 | P1 | `{"text"}` (1–280 chars) | 201 `{"id", "text"}` |
-| `GET /api/leaderboard` | P1 | | `{"leaderboard": [{"rank", "name", "points", "reports_total"}]}` |
+| `POST /api/comments` 🔒 | P1 | `{"text"}` (1–280 chars) | 201 `{"id", "text", "points_awarded"}` |
+| `GET /api/leaderboard` | P1 | | `{"leaderboard": [{"id", "rank", "name", "points", "reports_total"}], "current_user": {"id", "name", "points", "rank", "flagged"}|null, "total_contributors": int}` |
 | `GET /api/summary` | P3 | | `Summary` |
 | `POST /api/checkout` 🔒 | P3 | | `{"url"}` (Stripe Checkout URL) |
 | `GET /api/checkout/confirm?session_id=` 🔒 | P3 | | `{"user": User}` once paid |
@@ -118,7 +128,7 @@ endpoints marked 🔒 return 401 when logged out.
 | Pages: `/`, `/leaderboard`, `/premium`, `/account` | P2 | | HTML |
 
 ```
-User    = {"id", "name", "email", "trust_score", "points", "flagged", "is_premium",
+User    = {"id", "name", "email", "trust_score", "points", "rank": int|null, "flagged", "is_premium",
            "premium_until", "premium_source", "ntfy_topic"}
 Status  = {"level", "label", "score", "confidence": "low"|"medium"|"high",
            "report_count", "trend_per_min", "updated_at"}

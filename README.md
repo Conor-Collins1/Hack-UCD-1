@@ -10,7 +10,7 @@ A web app where students tap one button to report whether the library is **Not f
 
 FastAPI routes, signed demo login, database tables, occupancy calculation (time decay, trust weights,
 hysteresis and trend), report cooldown, comments, pages and PostgreSQL configuration are implemented.
-Trust judgement, leaderboard rewards, AI summaries, payments remain team TODOs. Notifications are deferred as a future idea.
+Trust judgement, automatic leaderboard rewards, AI summaries and payments remain team TODOs. Participation points and live ranks are implemented. Notifications are deferred as a future idea.
 The integration routes return placeholders or explicit unavailable errors until Person 3 implements them.
 Name/email login does not verify email ownership: use synthetic data until verified authentication is added.
 The prior anonymous prototype database is separate and is not migrated; the app now uses the team's schema.
@@ -121,10 +121,17 @@ Notifications may eventually warn students when the library fills or space opens
 - The same call filters out abusive or spam comments.
 
 ### Leaderboard
-- +1 point when a report matches the consensus.
-- +3 for being first to report a change that others later confirm.
-- 0 points for flagged users.
-- Monthly reset (`python -m library.cli reward-top`): top 3 get `premium_until = now + 30 days` (no Stripe charge needed).
+- +5 points for each accepted occupancy report; one report every 10 minutes.
+- +2 points for each accepted comment; one comment per minute. Duplicate text from the same user
+  within two hours is rejected, ignoring case and extra whitespace.
+- Invalid, rejected and flagged-user submissions earn no points. Points are saved in the same
+  transaction as the submission, so a failed save awards nothing.
+- The leaderboard shows the top 10 positive-scoring, unflagged contributors. Ties share ranks
+  (1, 1, 3). Your own rank is shown even when outside the top 10.
+- Your score and position appear on the status, account and leaderboard pages. The leaderboard
+  refreshes every 10 seconds while visible.
+- Participation scoring starts with new submissions; historical content is not backfilled.
+  Monthly reset and top-three premium rewards are future ideas, not active behavior.
 
 ### Stripe (bonus +5 points)
 - Sandbox Checkout Session for a subscription, e.g. €1.99/month.

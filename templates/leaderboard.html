@@ -2,9 +2,14 @@
 {% block title %}Leaderboard · Library Status{% endblock %}
 {% block content %}
 <section class="card">
-  <h1>Most useful reporters</h1>
-  <p class="muted">Top 3 at the end of the month get a free month of premium.</p>
-  <ol id="leaderboard"><li class="muted">Loading…</li></ol>
+  <p class="eyebrow">Every update helps</p>
+  <h1>Community leaderboard</h1>
+  <p class="body-muted">Earn 5 points for each accepted library report and 2 for each new comment.</p>
+  <p class="body-muted">Reports: once every 10 minutes. Comments: once a minute. Duplicate comments within two hours earn no points. Equal scores share a rank.</p>
+  <p id="leaderboard-position" class="notice" role="status">Loading your position…</p>
+  <p id="leaderboard-meta" class="body-muted"></p>
+  <ol id="leaderboard" class="community-ranking"><li class="body-muted">Loading…</li></ol>
+  <p id="leaderboard-error" role="status"></p>
 </section>
 {% endblock %}
 {% block scripts %}<script>initLeaderboardPage();</script>{% endblock %}

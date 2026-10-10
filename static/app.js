@@ -177,7 +177,7 @@ function setSignedIn(user) {
   $('report-signed-in').hidden = !user;
   $('comment-form').hidden = !user;
   $('comment-signed-out').hidden = !!user;
-  if (user) $('reporter-name').textContent = user.name;
+  if (user) { $('reporter-name').textContent = user.name; $('reporter-score').textContent = scoreText(user); }
 }
 
 function reportButtons() { return document.querySelectorAll('.report-option'); }
@@ -261,7 +261,8 @@ function initStatusPage() {
         renderStatus(data.status);
         announce('Thanks, your report is in.');
         const me = await api('/api/me').catch(() => ({ seconds_until_can_report: 0 }));
-        startCooldown(me.seconds_until_can_report, 'Thanks, your report is in.', 'success');
+        if (me.user) setSignedIn(me.user);
+        startCooldown(me.seconds_until_can_report, `Thanks, your report is in. +${data.points_awarded || 0} points.`, 'success');
       } catch (e) {
         button.removeAttribute('aria-pressed');
         if (e.status === 429) {
@@ -297,10 +298,12 @@ function initStatusPage() {
     const submit = commentForm.querySelector('button');
     submit.disabled = true;
     try {
-      await api('/api/comments', { method: 'POST', body: { text } });
+      const result = await api('/api/comments', { method: 'POST', body: { text } });
       commentForm.reset();
       updateCounter();
-      announce('Comment posted.');
+      announce(`Comment posted. +${result.points_awarded || 0} points.`);
+      const me = await api('/api/me').catch(() => null);
+      if (me) setSignedIn(me.user);
       refreshComments();
     } catch (e) {
       if (e.status === 401) setSignedIn(null);
@@ -315,7 +318,12 @@ function initStatusPage() {
 
   // Poll only while the tab is visible; catch up immediately when it comes back.
   const visible = () => document.visibilityState === 'visible';
-  setInterval(() => { if (visible()) refreshStatus(); }, 10000);
+  setInterval(() => {
+    if (visible()) {
+      refreshStatus();
+      if (statusPage.user) api('/api/me').then(me => setSignedIn(me.user)).catch(e => { if (e.status === 401) setSignedIn(null); });
+    }
+  }, 10000);
   setInterval(() => { if (visible()) { refreshSummary(); refreshComments(); } }, 30000);
   setInterval(renderUpdated, 15000);
   document.addEventListener('visibilitychange', () => {
@@ -323,14 +331,37 @@ function initStatusPage() {
   });
 }
 
+function scoreText(user) {
+  if (user.flagged) return `${user.points} points · Currently unranked`;
+  return `${user.points} points · ${user.rank ? 'Your rank: #' + user.rank : 'Submit an update to earn your first rank'}`;
+}
+
 // ---- Leaderboard page ----
 
 async function initLeaderboardPage() {
-  try {
-    const data = await api('/api/leaderboard');
-    if (!data.leaderboard.length) { $('leaderboard').textContent = 'Leaderboard scoring is not implemented yet.'; return; }
-    listItems($('leaderboard'), data.leaderboard, (li, row) => { li.textContent = `${row.name} · ${row.points} pts`; });
-  } catch (e) { $('leaderboard').textContent = e.message; }
+  async function refresh() {
+    try {
+      const data = await api('/api/leaderboard');
+      $('leaderboard-error').textContent = '';
+      $('leaderboard-position').textContent = data.current_user
+        ? scoreText(data.current_user) : 'Sign in on the Account page to see your points and rank.';
+      $('leaderboard-meta').textContent = `Top ${data.leaderboard.length} of ${data.total_contributors} contributors · refreshes every 10 seconds`;
+      listItems($('leaderboard'), data.leaderboard, (li, row) => {
+        const isYou = data.current_user && data.current_user.id === row.id;
+        li.dataset.you = String(!!isYou);
+        li.value = row.rank;
+        const name = document.createElement('strong');
+        name.textContent = `#${row.rank} ${row.name}${isYou ? ' (you)' : ''}`;
+        const points = document.createElement('span');
+        points.textContent = `${row.points} points`;
+        li.append(name, points);
+      });
+      if (!data.leaderboard.length) $('leaderboard').textContent = 'No points yet. Be the first to contribute!';
+    } catch (e) { $('leaderboard-error').textContent = 'Could not refresh the leaderboard. Retrying automatically.'; }
+  }
+  await refresh();
+  setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 10000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
 }
 
 // ---- Premium page ----
@@ -355,9 +386,16 @@ async function initAccountPage() {
     $('account-card').hidden = false;
     $('account-name').textContent = user.name;
     $('account-details').textContent =
-      `${user.points} points · trust ${user.trust_score} · ${user.is_premium ? 'Premium' : 'Free plan'}`;
+      `${scoreText(user)} · ${user.is_premium ? 'Premium' : 'Free plan'}`;
   };
-  try { show((await api('/api/me')).user); } catch { /* not logged in */ }
+  const refreshAccount = async () => {
+    try { show((await api('/api/me')).user); }
+    catch (e) {
+      if (e.status === 401) { $('login-card').hidden = false; $('account-card').hidden = true; }
+    }
+  };
+  await refreshAccount();
+  setInterval(() => { if (document.visibilityState === 'visible') refreshAccount(); }, 10000);
 
   $('login-form').addEventListener('submit', async event => {
     event.preventDefault();
