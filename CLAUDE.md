@@ -3,7 +3,7 @@
 You are helping one of three people build **Library Status** for HackUCD 2026 (5-hour build).
 Students tap a button to report whether the UCD library is Not full / ~80% full / Full. The app
 combines reports into a live status, flags people who keep giving false reports, summarises
-comments with AI (OpenRouter), alerts premium subscribers, and has a leaderboard.
+comments with AI (OpenRouter), has a sandbox payments page, and has a leaderboard. Notifications are a future idea only.
 
 Use the person identified in the conversation (Conor is Person 1); ask only if unknown, then read their plan
 file in `plan/`. The full plan and algorithms are in `README.md`.
@@ -20,7 +20,7 @@ file in `plan/`. The full plan and algorithms are in `README.md`.
 4. **Always use `clock.now()`**, never `datetime.now()`/`utcnow()`. Wrap datetimes read
    from the DB in `clock.as_utc()` (SQLite drops timezones).
 5. **Every error returns JSON** `{"error": "<message a student can understand>"}` with a
-   sensible HTTP status. Never let an exception from OpenRouter, Stripe or ntfy break a request.
+   sensible HTTP status. Never let an exception from OpenRouter, Stripe break a request.
 6. **Insert user text with `textContent`**, never `innerHTML`. Comments are untrusted input,
    including when sent to the AI.
 7. **Never commit secrets.** Keys live in `.env` (gitignored). Stripe keys must be `sk_test_`.
@@ -36,11 +36,18 @@ frontend wiring, configuration, tests and documentation. New work follows the ow
 Use APIRouter (`router`), FastAPI Request/Depends and JSONResponse; no WSGI entry point.
 The string levels and existing table/API contracts below remain in place.
 
+## Simplified demo scope
+
+Person 1 confirmed: keep name/email demo login and the payments page. Notifications are deferred;
+there is no notification setup UI, active endpoint, sending hook, or required notification credential.
+The existing database fields/tables are retained for compatibility; no destructive schema change is needed.
+Secrets stay in Render environment settings or local ignored .env, never in tracked files.
+
 ## Stack
 
 FastAPI + Uvicorn + SQLAlchemy Core (no ORM) · SQLite locally, hosted Postgres via `DATABASE_URL` on
 Render (free tier) · Jinja templates + vanilla JS (no build step) · `openai` SDK pointed at OpenRouter ·
-`stripe` (sandbox) · ntfy.sh via `requests` · pytest.
+`stripe` (sandbox) · pytest.
 
 ## File ownership
 
@@ -81,7 +88,7 @@ Display labels and scores live in `library/db.py`: `LEVEL_LABEL`, `LEVEL_SCORE` 
 | `trust.judge_pending_reports(conn)` | P1 | core_routes |
 | `trust.leaderboard(conn, limit=10) -> list` | P1 | core_routes |
 | `trust.reward_top_users(conn) -> list` | P1 | `python -m library.cli reward-top` |
-| `notify.check_and_send(conn, previous_status, new_status) -> list[str]` | P3 | core_routes, after every report |
+
 | `ai.get_summary(conn) -> dict` (shape = GET /api/summary) | P3 | integration_routes |
 | `payments.grant_premium(conn, user_id, days, source)` | P3 | payments, trust.reward_top_users |
 
@@ -104,7 +111,7 @@ endpoints marked 🔒 return 401 when logged out.
 | `POST /api/checkout` 🔒 | P3 | | `{"url"}` (Stripe Checkout URL) |
 | `GET /api/checkout/confirm?session_id=` 🔒 | P3 | | `{"user": User}` once paid |
 | `POST /webhooks/stripe` | P3 | Stripe event | `{"received": true}` |
-| `POST /api/me/ntfy` 🔒 | P3 | `{"topic"}` | `{"ok": true, "topic"}` |
+
 | `POST /api/demo/reports` | P1 | `{"email", "level", "name"?}` | only when `DEMO_MODE=1`, else 404 |
 | `POST /api/demo/comments` | P1 | `{"email", "text", "name"?}` | only when `DEMO_MODE=1`, else 404 |
 | `GET /health` | P1 | | `{"status": "ok", "database": "connected"}` |

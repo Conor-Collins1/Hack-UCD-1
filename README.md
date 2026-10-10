@@ -1,6 +1,6 @@
 # Library Status (HackUCD 2026)
 
-A web app where students tap one button to report whether the library is **Not full**, **~80% full** or **Full**. The backend combines those reports into a live status, catches people who keep sending false reports, summarises comments with AI, alerts premium subscribers before the library fills up, and rewards the most useful reporters.
+A web app where students tap one button to report whether the library is **Not full**, **~80% full** or **Full**. The backend combines those reports into a live status, catches people who keep sending false reports, summarises comments with AI, retains a sandbox payments page, and rewards the most useful reporters.
 
 **Theme:** Everyday Frustrations. Students waste time walking to a library that turns out to be full.
 
@@ -10,7 +10,7 @@ A web app where students tap one button to report whether the library is **Not f
 
 FastAPI routes, signed demo login, database tables, occupancy calculation (time decay, trust weights,
 hysteresis and trend), report cooldown, comments, pages and PostgreSQL configuration are implemented.
-Trust judgement, leaderboard rewards, AI summaries, payments and notifications remain team TODOs.
+Trust judgement, leaderboard rewards, AI summaries, payments remain team TODOs. Notifications are deferred as a future idea.
 The integration routes return placeholders or explicit unavailable errors until Person 3 implements them.
 Name/email login does not verify email ownership: use synthetic data until verified authentication is added.
 The prior anonymous prototype database is separate and is not migrated; the app now uses the team's schema.
@@ -23,9 +23,8 @@ The prior anonymous prototype database is separate and is not migrated; the app 
 | Live status | Weighted, time-decayed vote with a confidence label ("Based on 7 reports in the last 20 min") |
 | AI summary | OpenRouter turns recent comments into a Google Maps style summary with theme chips ("Quiet upstairs", "Few sockets") |
 | Bad-actor detection | Trust score per user; repeat false reporters get flagged and their reports stop counting |
-| Notifications (premium) | "Filling up" alert just before it's full, and "Space opening" when it drops from Full to 80% |
 | Leaderboard | Points for useful reports; top 3 each month get a free month of premium |
-| Premium subscription | Stripe sandbox Checkout; payment unlocks notifications automatically |
+| Premium subscription | Stripe sandbox Checkout; payment records demo premium status |
 
 ---
 
@@ -38,7 +37,6 @@ The prior anonymous prototype database is separate and is not migrated; the app 
 | Frontend | Jinja2 templates + vanilla JS + CSS (no build step), polling every 10s |
 | AI | `openai` Python SDK pointed at OpenRouter (`https://openrouter.ai/api/v1`) |
 | Payments | `stripe` Python library (sandbox) + Stripe CLI for local webhooks |
-| Notifications | ntfy.sh via `requests` |
 | Login | Name + email, Starlette signed session cookie (no passwords) |
 | Hosting | Render (Uvicorn) |
 | Tests | `pytest` + FastAPI TestClient |
@@ -56,7 +54,7 @@ library/
   core_routes.py               # /api/login, reports, status, comments...    (Person 1)
   pages.py                     # HTML pages                                  (Person 2)
   ai.py  payments.py  notify.py
-  integration_routes.py        # /api/summary, checkout, webhook, ntfy       (Person 3)
+  integration_routes.py        # /api/summary, checkout, webhook       (Person 3)
 templates/  static/            # frontend                                    (Person 2)
 scripts/replay.py              # replays a busy afternoon for the demo      (Person 1)
 tests/
@@ -112,10 +110,8 @@ python scripts/replay.py            # third terminal
 - Flag users below 0.3 trust after 5+ reports, or who send repeated reports within 10 minutes.
 - Flagged users see the app normally, but their reports carry zero weight.
 
-### Notifications (premium)
-- **Filling up:** if the status is rising fast enough to reach 0.9 within 15 minutes, send an alert.
-- **Space opening:** status moves from Full back to 80%.
-- At most one alert of each type per hour. Delivered via ntfy.sh (one POST request). Checked after every new report, so no background job is needed.
+### Future idea: notifications
+Notifications may eventually warn students when the library fills or space opens. They are outside the current demo and require no setup or keys.
 
 ### AI summary (OpenRouter)
 - Send comments from the last 2 hours; ask for JSON: a one-line summary plus 3–5 theme tags, each with sentiment and count.
@@ -144,22 +140,22 @@ Details and checklists: [`plan/person-1-core-backend.md`](plan/person-1-core-bac
 [`plan/person-2-frontend-users.md`](plan/person-2-frontend-users.md),
 [`plan/person-3-integrations.md`](plan/person-3-integrations.md).
 
-| Time | Person 1: core backend | Person 2: frontend, users, pitch | Person 3: AI, Stripe, alerts |
+| Time | Person 1: core backend | Person 2: frontend, users, pitch | Person 3: AI, Stripe |
 |---|---|---|---|
 | 0:00–0:20 | **All:** clone, run tests, read `CLAUDE.md`, agree any contract changes, get API keys | | |
 | 0:20–1:30 | Status calculation (weighting, hysteresis, confidence, trend) | Status page, report buttons, summary chips, comments; send out survey | OpenRouter summary: prompt, JSON validation, caching, fallbacks |
-| 1:30–2:45 | Trust scores, flags, leaderboard, top-3 reward; realistic `replay.py` | Leaderboard, premium and account pages; collect survey evidence | Stripe Checkout + webhook + confirm fallback; ntfy alerts |
+| 1:30–2:45 | Trust scores, flags, leaderboard, top-3 reward; realistic `replay.py` | Leaderboard, premium and account pages; collect survey evidence | Stripe Checkout + webhook + confirm fallback |
 | 2:45–3:30 | **All:** reset DB, run the replay, fix what breaks. **Feature freeze at 3:30.** | | |
 | 3:30–4:15 | Tests: no reports, boundaries, spammer, sudden jump | Mobile layout, loading/empty/error states; survey slide | AI limit tests (empty, junk, prompt injection); full payment run |
 | 4:15–5:00 | **All:** slides, demo script, two run-throughs, backup screen recording | | |
 
-**If behind, cut in this order:** the "filling up" prediction (keep Full→80% alert), then the +3 first-reporter bonus, then the Stripe webhook (keep the confirm fallback).
+**If behind:** cut the +3 first-reporter bonus, then the Stripe webhook (keep the confirm fallback). Notifications are already out of scope.
 **Never cut:** the OpenRouter feature, the full Stripe purchase flow, the replay script.
 
 ### Demo story (~3 min)
 1. A student checks the status.
 2. `replay.py` runs a busy day; the status climbs.
-3. A premium user's phone buzzes "Filling up".
+3. A student signs in with the name/email demo login.
 4. A spammer gets flagged and the status doesn't move.
 5. The AI summary updates as comments arrive.
 6. Leaderboard.
@@ -214,3 +210,7 @@ git push                           # upload (first push of a branch: git push -u
 ```
 
 Pull often, commit small, and don't commit `.env`.
+
+## Shared setup and credentials
+
+See [TEAM_SETUP.md](TEAM_SETUP.md) for teammate onboarding, which settings are public, and where each private credential belongs. The database schema and setup are in this repo; the hosted database itself is not stored in GitHub.

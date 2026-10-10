@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from library.http import json_body, response
 from sqlalchemy import insert, select
 
-from library import clock, notify, status, trust
+from library import clock, status, trust
 from library.auth import current_user, require_user, user_json
 from library.db import LEVELS, comments, engine, reports, users
 
@@ -52,12 +52,10 @@ def get_status(request: Request):
 
 def _submit_report(conn, user_id, level):
     """Shared by the real endpoint and the demo endpoint."""
-    previous = status.compute_status(conn)
     conn.execute(insert(reports).values(user_id=user_id, level=level))
     trust.judge_pending_reports(conn)
     new = status.compute_status(conn)
     status.save_snapshot(conn, new)
-    notify.check_and_send(conn, previous, new)
     return new
 
 

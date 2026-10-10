@@ -356,7 +356,6 @@ async function initAccountPage() {
     $('account-name').textContent = user.name;
     $('account-details').textContent =
       `${user.points} points · trust ${user.trust_score} · ${user.is_premium ? 'Premium' : 'Free plan'}`;
-    $('ntfy').value = user.ntfy_topic || '';
   };
   try { show((await api('/api/me')).user); } catch { /* not logged in */ }
 
@@ -365,13 +364,6 @@ async function initAccountPage() {
     try {
       show((await api('/api/login', { method: 'POST', body: { name: $('name').value, email: $('email').value } })).user);
     } catch (e) { $('login-msg').textContent = e.message; }
-  });
-  $('ntfy-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    try {
-      await api('/api/me/ntfy', { method: 'POST', body: { topic: $('ntfy').value } });
-      $('ntfy-msg').textContent = 'Saved.';
-    } catch (e) { $('ntfy-msg').textContent = e.message; }
   });
   $('logout').addEventListener('click', async () => { await api('/api/logout', { method: 'POST' }); location.reload(); });
 }
