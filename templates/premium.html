@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Premium · Library Status{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Premium · €1.99/month</h1>
+  <ul>
+    <li>A phone alert just before the library fills up</li>
+    <li>A phone alert when space opens up again</li>
+  </ul>
+  <button id="subscribe">Subscribe</button>
+  <p id="premium-msg" role="status" aria-live="polite"></p>
+  <p class="muted">Test mode: no real payments are taken.</p>
+</section>
+{% endblock %}
+{% block scripts %}<script>initPremiumPage();</script>{% endblock %}

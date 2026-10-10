@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Account · Library Status{% endblock %}
+{% block content %}
+<section class="card" id="login-card">
+  <h1>Log in</h1>
+  <form id="login-form">
+    <input id="name" maxlength="60" required placeholder="Name">
+    <input id="email" type="email" maxlength="200" required placeholder="Email">
+    <button type="submit">Continue</button>
+  </form>
+  <p id="login-msg" role="status" aria-live="polite"></p>
+</section>
+
+<section class="card" id="account-card" hidden>
+  <h1 id="account-name"></h1>
+  <p id="account-details"></p>
+  <form id="ntfy-form">
+    <label for="ntfy">ntfy topic for alerts (install the ntfy app and subscribe to the same topic)</label>
+    <input id="ntfy" maxlength="64" placeholder="my-library-alerts-123">
+    <button type="submit">Save</button>
+  </form>
+  <p id="ntfy-msg" role="status" aria-live="polite"></p>
+  <button id="logout" type="button">Log out</button>
+</section>
+{% endblock %}
+{% block scripts %}<script>initAccountPage();</script>{% endblock %}

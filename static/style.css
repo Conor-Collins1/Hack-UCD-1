@@ -1,0 +1,20 @@
+/* Placeholder styles. OWNER: Person 2. */
+* { box-sizing: border-box; }
+body { margin: 0; background: #101827; color: #eef2ff; font-family: system-ui, sans-serif; line-height: 1.5; }
+nav { display: flex; gap: 16px; padding: 16px; border-bottom: 1px solid #334155; }
+nav a { color: #6ee7b7; text-decoration: none; font-weight: 600; }
+main { width: min(100% - 32px, 560px); margin: 24px auto; display: grid; gap: 16px; }
+.card { padding: 24px; border: 1px solid #334155; border-radius: 16px; background: #182235; }
+h1, h2 { margin-top: 0; }
+.status { font-size: 2rem; font-weight: 800; margin: 0; }
+.status[data-level="not_full"] { color: #6ee7b7; }
+.status[data-level="busy"] { color: #fbbf24; }
+.status[data-level="full"] { color: #f87171; }
+.muted { color: #94a3b8; }
+.buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+button { padding: 12px 18px; border: 0; border-radius: 10px; background: #6ee7b7; color: #10281e; font: inherit; font-weight: 700; cursor: pointer; }
+button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+input { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #64748b; border-radius: 10px; background: #101827; color: white; font: inherit; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
+.chips li { padding: 4px 12px; border-radius: 999px; background: #334155; }
+#comments { padding-left: 20px; overflow-wrap: anywhere; }

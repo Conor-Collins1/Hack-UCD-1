@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard · Library Status{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Most useful reporters</h1>
+  <p class="muted">Top 3 at the end of the month get a free month of premium.</p>
+  <ol id="leaderboard"><li class="muted">Loading…</li></ol>
+</section>
+{% endblock %}
+{% block scripts %}<script>initLeaderboardPage();</script>{% endblock %}

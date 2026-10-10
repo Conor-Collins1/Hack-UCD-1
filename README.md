@@ -24,33 +24,34 @@ A web app where students tap one button to report whether the library is **Not f
 
 | Layer | Choice |
 |---|---|
-| Backend | FastAPI + Uvicorn (Python) |
-| Database | SQLite via SQLModel |
-| Frontend | Jinja2 templates / static HTML + Tailwind (CDN) + vanilla JS, polling every 10s |
+| Backend | Flask 3 + SQLAlchemy Core (Python) |
+| Database | SQLite locally; Supabase Postgres on Render via `DATABASE_URL` |
+| Frontend | Jinja2 templates + vanilla JS + CSS (no build step), polling every 10s |
 | AI | `openai` Python SDK pointed at OpenRouter (`https://openrouter.ai/api/v1`) |
-| Payments | `stripe` Python library + Stripe CLI for local webhooks |
-| Notifications | ntfy.sh via `httpx` |
-| Background jobs | `asyncio` task started in FastAPI's `lifespan`, runs every 60s |
-| Login | Name + email, signed session cookie (no passwords) |
-| Tests | `pytest` + FastAPI `TestClient` |
+| Payments | `stripe` Python library (sandbox) + Stripe CLI for local webhooks |
+| Notifications | ntfy.sh via `requests` |
+| Login | Name + email, Flask signed session cookie (no passwords) |
+| Hosting | Render (gunicorn) |
+| Tests | `pytest` + Flask test client |
+
+**Team docs:** [`CLAUDE.md`](CLAUDE.md) is the shared contract (tables, endpoints, file ownership,
+rules for AI assistants). Each person's tasks are in [`plan/`](plan/).
 
 ### Project layout
 
 ```
-app/
-  main.py            # FastAPI app, background loop, routes
-  db.py              # SQLModel engine + table models
-  status.py          # weighted average, hysteresis, confidence
-  trust.py           # consensus agreement, trust score, flags, leaderboard points
-  ai.py              # OpenRouter summary + comment filtering, caching, fallback
-  payments.py        # Checkout Session + webhook handler
-  notify.py          # ntfy alerts with cooldown
-  templates/
-  static/
-scripts/replay.py    # replays a busy day of fake reports for the demo
+app.py                         # Flask app, CLI commands, /health            (Person 1)
+library/
+  db.py  auth.py  clock.py     # tables, login, app clock                    (Person 1)
+  status.py  trust.py          # status calculation, bad actors, leaderboard (Person 1)
+  core_routes.py               # /api/login, reports, status, comments...    (Person 1)
+  pages.py                     # HTML pages                                  (Person 2)
+  ai.py  payments.py  notify.py
+  integration_routes.py        # /api/summary, checkout, webhook, ntfy       (Person 3)
+templates/  static/            # frontend                                    (Person 2)
+scripts/replay.py              # replays a busy afternoon for the demo      (Person 1)
 tests/
-requirements.txt
-.env                 # secrets, never committed
+plan/                          # one task file per person
 ```
 
 ---
@@ -58,35 +59,30 @@ requirements.txt
 ## Getting started
 
 ```bash
-git clone <repo-url>
-cd hackucd-library
-python -m venv .venv
+git clone https://github.com/Conor-Collins1/Hack-UCD-1.git
+cd Hack-UCD-1
+python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install fastapi uvicorn sqlmodel jinja2 openai stripe httpx python-dotenv pytest
+pip install -r requirements.txt
+cp .env.example .env               # then fill in the keys
+flask --app app init-db
+flask --app app run --debug        # http://localhost:5000
+pytest
 ```
 
-Create a `.env` file in the project root:
-
-```
-OPENROUTER_API_KEY=sk-or-...
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PRICE_ID=price_...
-STRIPE_WEBHOOK_SECRET=whsec_...    # printed by `stripe listen`
-NTFY_TOPIC=hackucd-library-<something-random>
-SESSION_SECRET=<any long random string>
-```
-
-Run it:
+Stripe webhooks locally (second terminal):
 
 ```bash
-uvicorn app.main:app --reload
-# in a second terminal, forward Stripe sandbox webhooks:
-stripe listen --forward-to localhost:8000/webhooks/stripe
-# in a third terminal, run the demo replay:
-python scripts/replay.py
+stripe listen --forward-to localhost:5000/webhooks/stripe
 ```
 
-Open http://localhost:8000 for the app and http://localhost:8000/docs for the API docs.
+Demo run: set `DEMO_MODE=1` and `DEMO_SPEED=60` in `.env` (time runs 60x faster), then
+
+```bash
+flask --app app reset-db
+flask --app app run
+python scripts/replay.py            # third terminal
+```
 
 ---
 
@@ -110,7 +106,7 @@ Open http://localhost:8000 for the app and http://localhost:8000/docs for the AP
 ### Notifications (premium)
 - **Filling up:** if the status is rising fast enough to reach 0.9 within 15 minutes, send an alert.
 - **Space opening:** status moves from Full back to 80%.
-- At most one alert of each type per hour. Delivered via ntfy.sh (one POST request); browser notifications as a fallback.
+- At most one alert of each type per hour. Delivered via ntfy.sh (one POST request). Checked after every new report, so no background job is needed.
 
 ### AI summary (OpenRouter)
 - Send comments from the last 2 hours; ask for JSON: a one-line summary plus 3–5 theme tags, each with sentiment and count.
@@ -123,11 +119,11 @@ Open http://localhost:8000 for the app and http://localhost:8000/docs for the AP
 - +1 point when a report matches the consensus.
 - +3 for being first to report a change that others later confirm.
 - 0 points for flagged users.
-- Monthly reset: top 3 get `premium_until = now + 30 days` (no Stripe charge needed).
+- Monthly reset (`flask --app app reward-top`): top 3 get `premium_until = now + 30 days` (no Stripe charge needed).
 
 ### Stripe (bonus +5 points)
 - Sandbox Checkout Session for a subscription, e.g. €1.99/month.
-- Webhook on `checkout.session.completed` sets `is_premium`.
+- Webhook on `checkout.session.completed` sets `is_premium`; `/api/checkout/confirm` is a backup that asks Stripe directly.
 - Account page shows the subscription as active.
 - Test card: `4242 4242 4242 4242`, any future expiry, any CVC.
 
@@ -135,16 +131,20 @@ Open http://localhost:8000 for the app and http://localhost:8000/docs for the AP
 
 ## The 5-hour plan
 
-| Time | A (backend) | B (frontend) | C (AI + Stripe) | D (users + pitch) |
-|---|---|---|---|---|
-| 0:00–0:20 | **All:** agree tables + API endpoints, get OpenRouter + Stripe test keys, set up `.env` | | | |
-| 0:20–1:30 | Status calculation with trust weighting; report / comment / status endpoints | Status buttons, status card with confidence, comment box | OpenRouter summary + filtering, caching, fallbacks | Survey 15+ students (in the room and at the library); write `replay.py` |
-| 1:30–2:45 | Bad-actor scoring + flags; leaderboard query | Leaderboard page, flagged badge, premium page | Stripe Checkout, webhook, premium unlock; ntfy alerts | Collect survey results; draft pitch (users, problem, workaround, how we reach them) |
-| 2:45–3:30 | **All:** connect everything end to end, run the replay. **Feature freeze at 3:30.** | | | |
-| 3:30–4:15 | Tests: no reports, one report, spammer, sudden jump to full | Error messages, mobile layout, loading states | AI tests: empty input, junk comments, prompt-injection comment; record results | Turn the survey into charts / quotes |
-| 4:15–5:00 | **All:** demo script, slides, two full run-throughs, backup screen recording | | | |
+Details and checklists: [`plan/person-1-core-backend.md`](plan/person-1-core-backend.md),
+[`plan/person-2-frontend-users.md`](plan/person-2-frontend-users.md),
+[`plan/person-3-integrations.md`](plan/person-3-integrations.md).
 
-**If behind, cut in this order:** the "filling up" prediction (keep Full→80% alert), then the +3 first-reporter bonus, then browser notifications.
+| Time | Person 1: core backend | Person 2: frontend, users, pitch | Person 3: AI, Stripe, alerts |
+|---|---|---|---|
+| 0:00–0:20 | **All:** clone, run tests, read `CLAUDE.md`, agree any contract changes, get API keys | | |
+| 0:20–1:30 | Status calculation (weighting, hysteresis, confidence, trend) | Status page, report buttons, summary chips, comments; send out survey | OpenRouter summary: prompt, JSON validation, caching, fallbacks |
+| 1:30–2:45 | Trust scores, flags, leaderboard, top-3 reward; realistic `replay.py` | Leaderboard, premium and account pages; collect survey evidence | Stripe Checkout + webhook + confirm fallback; ntfy alerts |
+| 2:45–3:30 | **All:** reset DB, run the replay, fix what breaks. **Feature freeze at 3:30.** | | |
+| 3:30–4:15 | Tests: no reports, boundaries, spammer, sudden jump | Mobile layout, loading/empty/error states; survey slide | AI limit tests (empty, junk, prompt injection); full payment run |
+| 4:15–5:00 | **All:** slides, demo script, two run-throughs, backup screen recording | | |
+
+**If behind, cut in this order:** the "filling up" prediction (keep Full→80% alert), then the +3 first-reporter bonus, then the Stripe webhook (keep the confirm fallback).
 **Never cut:** the OpenRouter feature, the full Stripe purchase flow, the replay script.
 
 ### Demo story (~3 min)
@@ -173,10 +173,26 @@ All reports, users and comments in the demo are **synthetic**, generated by `scr
 
 ---
 
+## Deploying (Render + Supabase)
+
+Supabase hosts the PostgreSQL database; Render hosts the Flask website.
+
+1. Create a Supabase project. From its Connect dialog, select the PostgreSQL **session pooler** connection string (port 5432), which supports IPv4. Insert your database password using URL encoding for special characters.
+2. In Render's Environment settings, add `DATABASE_URL` with that connection string, plus `sslmode=require` in the query string. Add the other keys from `.env.example` too (not the `DEMO_*` ones). Never commit or share these values in chat.
+3. Connect Render to this GitHub repository.
+4. Build command: `pip install -r requirements.txt`
+5. Start command: `python -m flask --app app init-db && gunicorn --bind 0.0.0.0:$PORT app:app`
+6. Health check path: `/health`
+7. In the Stripe dashboard, add a webhook endpoint `https://<your-app>.onrender.com/webhooks/stripe` for `checkout.session.completed` and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+
+Without `DATABASE_URL`, Render uses local SQLite, which is **not durable across redeployments**. Run the live demo locally (`DEMO_SPEED` needs a single process).
+
+---
+
 ## Git basics for the team
 
 ```bash
-git clone <repo-url>               # first time only
+git clone https://github.com/Conor-Collins1/Hack-UCD-1.git   # first time only
 git pull                           # get everyone's latest changes before you start
 git checkout -b my-feature         # optional: work on your own branch
 git add <files>                    # stage your changes
