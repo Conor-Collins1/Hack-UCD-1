@@ -528,6 +528,28 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 
 .feedback-card { margin-top: var(--s3); margin-bottom: var(--s3); }
 
+/* ---- Premium forecast card ---- */
+.forecast {
+  --c: var(--none); --c-bg: var(--none-bg); --c-text: var(--none-text);
+  border-left: 4px solid var(--c); transition: border-color 1200ms ease-in-out;
+}
+.forecast[data-level="not_full"] { --c: var(--ok);   --c-bg: var(--ok-bg);   --c-text: var(--ok-text); }
+.forecast[data-level="busy"]     { --c: var(--busy); --c-bg: var(--busy-bg); --c-text: var(--busy-text); }
+.forecast[data-level="full"]     { --c: var(--full); --c-bg: var(--full-bg); --c-text: var(--full-text); }
+.forecast__label {
+  display: flex; align-items: center; gap: var(--s1); margin: var(--s1) 0;
+  font-size: 22px; line-height: 28px; font-weight: 700; color: var(--c-text);
+}
+.forecast__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
+.forecast[data-level="busy"] .forecast__dot { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.forecast[data-level="full"] .forecast__dot { border-radius: 2px; }
+.forecast .btn { margin-top: var(--s1); text-decoration: none; }
+@media (min-width: 840px) {
+  /* Forecast sits directly under the live status; comments stretch alongside both cards. */
+  #forecast-card { grid-column: 1; grid-row: 2; }
+  #report-card { grid-row: 3; }
+  .comments-card { grid-row: 2 / span 2; }
+}
 .premium-alerts { display: grid; gap: var(--s2); margin: var(--s3) 0; }
 .premium-alert { background: var(--surface); border: 1px solid var(--sand-line); border-left: 4px solid var(--oak); border-radius: var(--radius); padding: var(--s2); }
 .premium-alert h2 { margin: var(--s2) 0 var(--s1); }

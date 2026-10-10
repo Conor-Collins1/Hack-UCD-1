@@ -168,8 +168,55 @@ async function refreshComments() {
   }
 }
 
+// ---- Premium forecast ----
+
+const FORECAST_LABEL = { not_full: 'Not full', busy: '~80% full', full: 'Full' };
+function forecastLevel(score) { return score > 0.9 ? 'full' : score >= 0.5 ? 'busy' : 'not_full'; }
+
+function showForecastMessage(text) {
+  $('forecast-card').dataset.level = 'unknown';
+  $('forecast-body').hidden = true;
+  $('forecast-locked').hidden = true;
+  $('forecast-msg').hidden = false;
+  $('forecast-msg').textContent = text;
+}
+
+async function refreshForecast() {
+  if (!$('forecast-card')) return;
+  if (!statusPage.user) return showForecastMessage('Sign in and get Premium to see how full the library will be in an hour.');
+  try {
+    const f = await api('/api/forecast');
+    $('forecast-locked').hidden = true;
+    if (!f.open) return showForecastMessage('The library is expected to be closed in an hour.');
+    $('forecast-card').dataset.level = f.level;
+    $('forecast-label').textContent = `Probably ${f.label.toLowerCase()}`;
+    $('forecast-explanation').textContent = f.explanation;
+    $('forecast-time').textContent = new Date(f.forecast_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Dublin' });
+    const [low, high] = f.range.map(forecastLevel);
+    $('forecast-range').textContent = low === high ? FORECAST_LABEL[low] : `${FORECAST_LABEL[low]} to ${FORECAST_LABEL[high]}`;
+    $('forecast-confidence').textContent = f.confidence[0].toUpperCase() + f.confidence.slice(1);
+    $('forecast-note').textContent = f.data_note;
+    $('forecast-msg').hidden = true;
+    $('forecast-body').hidden = false;
+  } catch (e) {
+    if (e.status === 403 && e.data.premium_required) {
+      showForecastMessage('');
+      $('forecast-msg').hidden = true;
+      $('forecast-locked').hidden = false;
+    } else if (e.status === 401) {
+      showForecastMessage('Sign in and get Premium to see how full the library will be in an hour.');
+    } else {
+      showForecastMessage("Couldn't load the forecast. Retrying automatically.");
+    }
+  }
+}
+
 function setSignedIn(user) {
+  const forecastKey = user ? `${user.id}:${user.is_premium}` : '';
+  const forecastChanged = forecastKey !== statusPage.forecastKey;
+  statusPage.forecastKey = forecastKey;
   statusPage.user = user;
+  if (forecastChanged) refreshForecast();
   $('report-signed-out').hidden = !!user;
   $('report-signed-in').hidden = !user;
   $('comment-form').hidden = !user;
@@ -350,6 +397,7 @@ function initStatusPage() {
     }
   }, 10000);
   setInterval(() => { if (visible()) { refreshSummary(); refreshComments(); } }, 30000);
+  setInterval(() => { if (visible()) refreshForecast(); }, 60000);
   setInterval(renderUpdated, 15000);
   document.addEventListener('visibilitychange', () => {
     if (visible()) { refreshStatus(); refreshSummary(); refreshComments(); }
