@@ -53,6 +53,14 @@ Flagged users earn no points and are excluded. Rank by total points; ties share 
 monthly reset or automatic premium rewards. Demo replay also awards points, and bypasses cooldowns.
 Trust judgement must not award the old agreement/first-reporter bonus on top of participation points.
 
+## AI summary implementation (Person 1 request)
+
+Person 1 requested implementation of the existing AI integration across owned modules.
+Summary uses up to 50 recent comments, server-side OpenRouter settings (default model openrouter/free),
+strict response validation, cache and timeout/backoff. The route holds a process lock through commit.
+Keep one worker for the demo. No new schema or dependencies. generated_at is null when no summary exists.
+Comments are untrusted and model moderation is fallible; never expose credentials in responses/logs.
+
 ## Stack
 
 FastAPI + Uvicorn + SQLAlchemy Core (no ORM) · SQLite locally, hosted Postgres via `DATABASE_URL` on

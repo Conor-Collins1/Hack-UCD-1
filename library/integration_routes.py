@@ -14,8 +14,14 @@ from library.db import engine
 router = APIRouter()
 @router.get('/api/summary')
 def get_summary(request: Request):
-    with engine.begin() as conn:
-        return response(ai.get_summary(conn))
+    if not ai.summary_lock.acquire(blocking=False):
+        with engine.connect() as conn:
+            return response(ai.fallback(conn))
+    try:
+        with engine.begin() as conn:
+            return response(ai.get_summary(conn))
+    finally:
+        ai.summary_lock.release()
 
 
 @router.post('/api/checkout')
