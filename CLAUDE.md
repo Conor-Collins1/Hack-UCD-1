@@ -89,6 +89,14 @@ session and FEEDBACK_ADMIN_PASSWORD (32+ characters). POST /api/feedback/lock re
 GET /feedback serves the inbox shell only; all feedback data requires team access. Email allowlists
 are unsuitable because demo login does not verify identity. No feedback points or public listing.
 
+## Frontend design adoption (Person 1 request)
+
+Person 1 authorized adopting the visual design from frontend/status-page across templates/static.
+Use its warm palette, library hero photo, report animations and bookshelf leaderboard presentation.
+Preserve main's API contracts, +5/+2 participation scoring, shared ranks and personal rank, live refresh,
+AI bullet summaries from the past hour, one-time permanent sandbox Premium and private feedback.
+Do not restore notifications, sample leaderboard data, delayed trust-based points or monthly resets.
+
 ## Stack
 
 FastAPI + Uvicorn + SQLAlchemy Core (no ORM) · SQLite locally, hosted Postgres via `DATABASE_URL` on
