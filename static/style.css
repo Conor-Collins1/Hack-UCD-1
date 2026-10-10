@@ -544,3 +544,9 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .forecast[data-level="busy"] .forecast__dot { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 .forecast[data-level="full"] .forecast__dot { border-radius: 2px; }
 .forecast .btn { margin-top: var(--s1); text-decoration: none; }
+@media (min-width: 840px) {
+  /* Forecast sits directly under the live status; comments stretch alongside both cards. */
+  #forecast-card { grid-column: 1; grid-row: 2; }
+  #report-card { grid-row: 3; }
+  .comments-card { grid-row: 2 / span 2; }
+}
