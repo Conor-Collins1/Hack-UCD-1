@@ -261,3 +261,12 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .community-ranking{list-style:none;padding:0}.community-ranking li{display:flex;justify-content:space-between;gap:16px;padding:18px 12px;border-bottom:1px solid var(--line,#dee5d8);overflow-wrap:anywhere}.community-ranking li[data-you="true"]{background:var(--surface-soft,#edf4e8);border-radius:12px}.community-ranking li strong{min-width:0}.community-ranking li span{white-space:nowrap}
 
 .summary-bullets{list-style:disc;padding-left:1.4rem;margin:0}.summary-bullets li{display:list-item;border:0;padding:0;margin:.65rem 0;line-height:1.6}
+
+/* Free Premium prize highlighted separately from the paid permanent upgrade. */
+.leaderboard-prize { margin: 24px 0; padding: 24px; background: #fff7df; border: 2px solid #b58522; border-radius: var(--radius); color: #49350c; }
+.leaderboard-prize h2 { margin: 8px 0; font-size: clamp(22px, 4vw, 30px); line-height: 1.2; }
+.leaderboard-prize p:last-child { margin-bottom: 0; }
+.community-ranking li[data-prize="true"] { border-left: 4px solid #b58522; }
+.ranking-details { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.community-ranking .ranking-prize { font-size: 12px; font-weight: 600; color: #49350c; background: #fff7df; padding: 4px 8px; border-radius: 6px; white-space: normal; text-align: right; }
+@media (max-width: 420px) { .community-ranking li { flex-wrap: wrap; } .ranking-details { align-items: flex-start; } }
