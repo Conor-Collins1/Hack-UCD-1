@@ -56,8 +56,9 @@ Trust judgement must not award the old agreement/first-reporter bonus on top of 
 ## AI summary implementation (Person 1 request)
 
 Person 1 requested implementation of the existing AI integration across owned modules.
-Summary uses up to 50 recent comments, server-side OpenRouter settings (default model openrouter/free),
+Summary uses up to 50 comments from the past hour, returns 1-5 bullet strings, server-side OpenRouter settings (default model openrouter/free),
 strict response validation, cache and timeout/backoff. The route holds a process lock through commit.
+Old sentence-format caches are invalidated. Theme metadata is retained in the API for compatibility but not displayed.
 Keep one worker for the demo. No new schema or dependencies. generated_at is null when no summary exists.
 Comments are untrusted and model moderation is fallible; never expose credentials in responses/logs.
 
@@ -140,7 +141,7 @@ User    = {"id", "name", "email", "trust_score", "points", "rank": int|null, "fl
            "premium_until", "premium_source", "ntfy_topic"}
 Status  = {"level", "label", "score", "confidence": "low"|"medium"|"high",
            "report_count", "trend_per_min", "updated_at"}
-Summary = {"status": "ok"|"not_enough"|"stale"|"error", "summary": str|null,
+Summary = {"status": "ok"|"not_enough"|"stale"|"error", "summary": list[str]|null,
            "themes": [{"label", "sentiment": "positive"|"neutral"|"negative", "count"}],
            "comment_count", "generated_at"}
 ```

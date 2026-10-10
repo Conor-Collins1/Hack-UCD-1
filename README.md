@@ -21,7 +21,7 @@ The prior anonymous prototype database is separate and is not migrated; the app 
 |---|---|
 | Status buttons | One tap to report Not full / 80% / Full |
 | Live status | Weighted, time-decayed vote with a confidence label ("Based on 7 reports in the last 20 min") |
-| AI summary | OpenRouter turns recent comments into a Google Maps style summary with theme chips ("Quiet upstairs", "Few sockets") |
+| AI summary | OpenRouter turns recent comments into a brief bullet points from comments in the past hour |
 | Bad-actor detection | Trust score per user; repeat false reporters get flagged and their reports stop counting |
 | Leaderboard | Points for useful reports; top 3 each month get a free month of premium |
 | Premium subscription | Stripe sandbox Checkout; payment records demo premium status |
@@ -114,12 +114,12 @@ python scripts/replay.py            # third terminal
 Notifications may eventually warn students when the library fills or space opens. They are outside the current demo and require no setup or keys.
 
 ### AI summary (OpenRouter)
-- Reads up to 50 latest visible comments from the past two hours. Names and emails are not sent;
+- Reads up to 50 latest visible comments from the past hour. Names and emails are not sent;
   comment text is sent to OpenRouter, so students should avoid personal details in comments.
 - Fewer than three comments: returns `not_enough` and makes no API call.
 - Uses OPENROUTER_API_KEY in Render; OPENROUTER_MODEL selects the model. If blank or unset,
   defaults to `openrouter/free` (https://openrouter.ai/openrouter/free), subject to provider limits.
-- Validates a one-sentence summary and up to five theme tags with sentiment and mention counts.
+- Validates 1-5 concise bullet points (180 characters each). Theme metadata is retained internally; the UI shows only the bullet points.
   Treats comment instructions as untrusted data; identified spam/abuse can be hidden, while normal
   criticism remains visible. Model moderation and summaries can still make mistakes.
 - Saves summaries in PostgreSQL/SQLite. Reuses them until five new comments arrive, ten minutes
@@ -160,7 +160,7 @@ Details and checklists: [`plan/person-1-core-backend.md`](plan/person-1-core-bac
 | Time | Person 1: core backend | Person 2: frontend, users, pitch | Person 3: AI, Stripe |
 |---|---|---|---|
 | 0:00–0:20 | **All:** clone, run tests, read `CLAUDE.md`, agree any contract changes, get API keys | | |
-| 0:20–1:30 | Status calculation (weighting, hysteresis, confidence, trend) | Status page, report buttons, summary chips, comments; send out survey | OpenRouter summary: prompt, JSON validation, caching, fallbacks |
+| 0:20–1:30 | Status calculation (weighting, hysteresis, confidence, trend) | Status page, report buttons, summary bullets, comments; send out survey | OpenRouter summary: prompt, JSON validation, caching, fallbacks |
 | 1:30–2:45 | Trust scores, flags, leaderboard, top-3 reward; realistic `replay.py` | Leaderboard, premium and account pages; collect survey evidence | Stripe Checkout + webhook + confirm fallback |
 | 2:45–3:30 | **All:** reset DB, run the replay, fix what breaks. **Feature freeze at 3:30.** | | |
 | 3:30–4:15 | Tests: no reports, boundaries, spammer, sudden jump | Mobile layout, loading/empty/error states; survey slide | AI limit tests (empty, junk, prompt injection); full payment run |

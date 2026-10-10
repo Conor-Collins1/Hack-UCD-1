@@ -26,7 +26,7 @@ def add_comments(number=3, text='Quiet upstairs', created=None):
 
 
 def output(hidden=None):
-    return json.dumps({'summary':'Students report a quiet upstairs area.',
+    return json.dumps({'summary':['Students report a quiet upstairs area.'],
                        'themes':[{'label':'Quiet upstairs','sentiment':'positive','count':3}],
                        'hidden_comment_ids':hidden or []})
 
@@ -82,7 +82,7 @@ def test_age_and_model_change_regenerate(client,monkeypatch):
     assert fake.call_count==3
 
 
-@pytest.mark.parametrize('content', ['broken json', '{}', json.dumps({'summary':'Bad','themes':[], 'hidden_comment_ids':[999999]}), json.dumps({'summary':'x'*301,'themes':[],'hidden_comment_ids':[]})])
+@pytest.mark.parametrize('content', ['broken json', '{}', json.dumps({'summary':'Bad','themes':[], 'hidden_comment_ids':[999999]}), json.dumps({'summary':['x'*181],'themes':[],'hidden_comment_ids':[]})])
 def test_invalid_output_is_not_saved_or_applied(client,monkeypatch,content):
     add_comments()
     monkeypatch.setattr(ai,'generate',lambda rows:content)
@@ -118,7 +118,7 @@ def test_missing_key_and_expired_sources(client,monkeypatch):
     fake.assert_not_called()
     monkeypatch.setenv('OPENROUTER_API_KEY','test-key-not-real')
     assert client.get('/api/summary').json()['status']=='ok'
-    monkeypatch.setattr(clock,'now',lambda:start+timedelta(hours=2,seconds=1))
+    monkeypatch.setattr(clock,'now',lambda:start+timedelta(hours=1,seconds=1))
     assert client.get('/api/summary').json()['status']=='not_enough'
     assert fake.call_count==1
 
@@ -136,7 +136,7 @@ def test_valid_moderation_only_hides_submitted_ids(client,monkeypatch):
 
 def test_all_spam_does_not_invent_summary(client,monkeypatch):
     ids=add_comments()
-    monkeypatch.setattr(ai,'generate',lambda rows:json.dumps({'summary':'','themes':[],'hidden_comment_ids':ids}))
+    monkeypatch.setattr(ai,'generate',lambda rows:json.dumps({'summary':[],'themes':[],'hidden_comment_ids':ids}))
     assert client.get('/api/summary').json()['status']=='not_enough'
     assert client.get('/api/comments').json()['comments']==[]
 
@@ -210,3 +210,38 @@ def test_fallback_models_blank_setting_uses_default_first(monkeypatch):
     monkeypatch.setenv('OPENROUTER_MODEL','  ')
     monkeypatch.setattr(ai,'FALLBACK_MODELS',['a:free'])
     assert ai.models_to_try()==[ai.DEFAULT_MODEL,'a:free']
+
+
+def test_only_past_hour_comments_reach_ai(client,monkeypatch):
+    start=clock.now()
+    monkeypatch.setattr(clock,'now',lambda:start)
+    recent_ids=add_comments(3,text='Current hour',created=start-timedelta(minutes=59))
+    add_comments(3,text='Too old',created=start-timedelta(minutes=61))
+    fake=MagicMock(return_value=output())
+    monkeypatch.setattr(ai,'generate',fake)
+    result=client.get('/api/summary').json()
+    assert result['status']=='ok'
+    assert result['summary']==['Students report a quiet upstairs area.']
+    assert {r['id'] for r in fake.call_args.args[0]}==set(recent_ids)
+    monkeypatch.setattr(clock,'now',lambda:start+timedelta(minutes=2))
+    assert client.get('/api/summary').json()['status']=='not_enough'
+
+
+def test_sentence_cache_is_regenerated(client,monkeypatch):
+    ids=add_comments()
+    old={'public':{'status':'ok','summary':'Old sentence summary','themes':[],
+                   'comment_count':3,'generated_at':clock.now().isoformat()},
+         'source_ids':ids,'source_max_id':max(ids),'model':ai.model_name()}
+    with db.engine.begin() as conn:
+        conn.execute(insert(db.ai_summaries).values(summary_json=json.dumps(old),comment_count=3,created_at=clock.now()))
+    fake=MagicMock(return_value=output())
+    monkeypatch.setattr(ai,'generate',fake)
+    assert isinstance(client.get('/api/summary').json()['summary'],list)
+    assert fake.call_count==1
+
+
+@pytest.mark.parametrize('bullets',[[''],['x'*181],['one']*6,'old prose',[123]])
+def test_invalid_bullet_output_is_rejected(client,monkeypatch,bullets):
+    add_comments()
+    monkeypatch.setattr(ai,'generate',lambda rows:json.dumps({'summary':bullets,'themes':[], 'hidden_comment_ids':[]}))
+    assert client.get('/api/summary').json()['status']=='error'

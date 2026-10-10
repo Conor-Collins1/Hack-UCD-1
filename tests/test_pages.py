@@ -36,7 +36,7 @@ def test_status_page_has_every_element_app_js_needs(client):
     ids = ['status-card', 'status-label', 'status-desc', 'status-count', 'status-confidence',
            'status-trend', 'status-updated', 'announcer', 'report-signed-out', 'report-signed-in',
            'report-login-form', 'login-name', 'login-email', 'login-error', 'reporter-name',
-           'report-msg', 'summary', 'themes', 'summary-meta', 'comment-form', 'comment',
+           'report-msg', 'summary', 'summary-empty', 'summary-meta', 'comment-form', 'comment',
            'comment-count', 'comment-error', 'comment-signed-out', 'comments', 'comments-empty']
     for element_id in ids:
         assert f'id="{element_id}"' in html, element_id
