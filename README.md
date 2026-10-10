@@ -1,256 +1,233 @@
-# Library Status (HackUCD 2026)
+# Library Status · HackUCD 2026
 
-A web app where students tap one button to report whether the library is **Not full**, **~80% full** or **Full**. The backend combines those reports into a live status, catches people who keep sending false reports, summarises comments with AI, retains a sandbox payments page, and rewards the most useful reporters.
+### Know before you go. Find a seat, skip the wasted trip.
 
-**Theme:** Everyday Frustrations. Students waste time walking to a library that turns out to be full.
+A student-powered live view of UCD's James Joyce Library. Check how busy it is, share what you see, read an AI digest of recent comments, and earn points for helping other students plan their next study session.
 
----
+**[Visit the live website →](https://hack-ucd-library.onrender.com/)** · [Leaderboard](https://hack-ucd-library.onrender.com/leaderboard) · [Premium](https://hack-ucd-library.onrender.com/premium)
 
-## Current implementation
+Built for **HackUCD 2026**, under the theme **Everyday Frustrations**: walking across campus only to discover that the library is full.
 
-FastAPI routes, signed demo login, database tables, occupancy calculation (time decay, trust weights,
-hysteresis and trend), report cooldown, comments, pages and PostgreSQL configuration are implemented.
-Trust judgement and automatic leaderboard rewards remain team TODOs. Participation points, live ranks, OpenRouter AI summaries, one-time sandbox payments and private feedback are implemented. Premium simulated alert triggers and history are implemented; actual delivery is deferred.
-Name/email login does not verify email ownership: use synthetic data until verified authentication is added.
-The prior anonymous prototype database is separate and is not migrated; the app now uses the team's schema.
+## Try it in a minute
 
-## Planned features
+1. **[Open Library Status](https://hack-ucd-library.onrender.com/)** and check the current estimate and confidence.
+2. Use the **demo login** with a name and a demo email address. Email ownership is not verified, so use an invented identity.
+3. Report **Not full**, **~80% full**, or **Full**, or leave a short comment about seats, noise, sockets or Wi-Fi.
+4. Earn **5 points per accepted report** and **2 per accepted comment**. Check your position on the leaderboard.
+5. Explore Premium's one-hour forecast and simulated alert history. Checkout runs in **Stripe sandbox**; no real payment is taken.
 
-| Feature | What it does |
+The hosted app may need a little time to wake up after being idle.
+
+## What we built
+
+| Feature | What students get |
 |---|---|
-| Status buttons | One tap to report Not full / 80% / Full |
-| Live status | Weighted, time-decayed vote with a confidence label ("Based on 7 reports in the last 20 min") |
-| AI summary | OpenRouter turns recent comments into a brief bullet points from comments in the past hour |
-| Bad-actor detection | Trust score per user; repeat false reporters get flagged and their reports stop counting |
-| Leaderboard | Points for useful reports; top 3 each month get a free month of premium |
-| One-time Premium purchase | Stripe sandbox Checkout; payment records demo premium status |
-| 1-hour forecast (Premium) | Predicts how full the library will be in an hour from past weeks plus live reports |
+| Live occupancy | A shared estimate that prioritises fresh reports, with confidence and update time |
+| One-tap reporting | Three clear status buttons, a cooldown countdown, and immediate points |
+| Community comments | A scrollable feed of short updates from other students |
+| AI bullet summaries | Up to five useful observations drawn only from comments in the past hour |
+| Live leaderboard | The top ten contributors, shared ranks for ties, and your own position even outside the top ten |
+| Premium forecast | An explainable estimate of how busy the library may be in one hour |
+| One-time demo purchase | EUR 1.99 sandbox Checkout that upgrades the paying account to permanent Premium |
+| Alert history | A persistent record of getting-busy and space-opening triggers on the Premium page |
+| Private feedback | Student feedback saved to the database, with a separate password-protected team inbox |
+| Responsive design | A warm library-inspired palette, library photography, animated report controls and a bookshelf leaderboard |
 
----
+The leaderboard highlights the **top-three prize: one month of Premium free**. Awarding that prize is a team action for now; automatic grants and monthly score resets are not implemented.
 
-## Tech stack
+## Technical highlights
 
-| Layer | Choice |
+### Recent reports can replace an outdated consensus
+
+Occupancy is a weighted estimate, rather than a count of every report ever submitted:
+
+- Each eligible person has **one current vote**, using their latest report. Flagged accounts and accounts with zero trust are excluded.
+- A report's weight **halves every three minutes**, multiplied by the account's trust score.
+- A group of **at least three different people reporting within five minutes** establishes a fresh cutoff. The calculation keeps at most the **five newest independent reports** from that cutoff onward.
+- Earlier reports stay in the database but stop influencing the estimate. Reconstructing the latest qualifying group prevents discarded votes from returning just because newer votes age.
+- Without a qualifying group, reports can provide a sparse fallback for up to **45 minutes**.
+- A fresh group can change the state immediately; sparse reporting uses hysteresis to avoid flickering around Full.
+
+For example, **30 older ~80% reports followed by three fresh Full reports now produces Full** in the API regression test.
+
+The three report values are `not_full = 0`, `busy = 0.8`, and `full = 1`. A weighted score above `0.9` means Full; otherwise `0.5` or above means ~80% full. With sparse updates, a previous Full state is retained until the score drops below `0.8`. Confidence is medium with three or four selected reports fresh within five minutes, high with five, and low otherwise. The ~80% label is an estimate category, not a measured seat count.
+
+### AI summaries with bounded inputs and graceful fallback
+
+The backend uses the **OpenAI Python SDK pointed at OpenRouter**. It sends up to 50 visible comments from the past hour, without attaching account names or emails. At least three comments are needed before making an AI call.
+
+Responses must pass strict validation: **one to five bullet points**, at most 180 characters each, plus validated internal theme and moderation fields. Comment text is treated as untrusted input. Model moderation can hide identified spam or abuse, but is fallible.
+
+Database caching avoids a call on every page refresh. Regeneration considers new comments, cache age, model changes and expired source comments. A 15-second provider timeout, model fallback list and one-minute failure cooldown protect the page from upstream failures. A still-relevant cached summary can be returned as stale. A process lock prevents duplicate generation within one app worker.
+
+### An explainable one-hour forecast
+
+Premium combines a typical weekday/time pattern with the current live deviation:
+
+```text
+forecast in 1 hour = typical occupancy in 1 hour
+                  + 0.5 × (live occupancy now − typical occupancy now)
+```
+
+The profile uses 15-minute slots and weights recent weeks more heavily. No recent live reports means the typical pattern is used alone. The response includes confidence, a range and an explanation, and handles assumed closed hours in the Europe/Dublin timezone.
+
+**The included five weeks of history are synthetic**, generated by a reproducible script. A backtest compares the method with typical-pattern and same-as-now baselines, including noisy live readings. This demonstrates the method, not proven real-world accuracy. The app does not currently train automatically on newly submitted reports; replacing the history with real observations is future work. Assumed hours are Mon–Fri 08:00–22:00 and Sat–Sun 10:00–18:00, not an authoritative library timetable.
+
+### Payments verified on the server
+
+Stripe Checkout uses **payment mode**, not a subscription. The configured sandbox Price must be an active one-time **EUR 1.99** price. A verified purchase grants permanent Premium to that account.
+
+Both signed webhooks and authenticated checkout-return confirmation use the same idempotent transaction. Before granting access, the backend checks the session's owner, paid status, sandbox mode, purpose and actual line-item price. A unique session ID prevents duplicate payment records. Live keys and live events are rejected.
+
+### Alert triggers with a persistent audit trail
+
+The backend records two transitions:
+
+| Transition | Recorded alert |
 |---|---|
-| Backend | FastAPI + Uvicorn + SQLAlchemy Core (Python) |
-| Database | SQLite locally; hosted Postgres on Render via `DATABASE_URL` |
-| Frontend | Jinja2 templates + vanilla JS + CSS (no build step), polling every 10s |
-| AI | `openai` Python SDK pointed at OpenRouter (`https://openrouter.ai/api/v1`) |
-| Payments | `stripe` Python library (sandbox) + Stripe CLI for local webhooks |
-| Login | Name + email, Starlette signed session cookie (no passwords) |
-| Hosting | Render (Uvicorn) |
-| Tests | `pytest` + FastAPI TestClient |
+| Not full → ~80% full | Getting busy |
+| Full → ~80% full | Space opening up |
 
-**Team docs:** [`CLAUDE.md`](CLAUDE.md) is the shared contract (tables, endpoints, file ownership,
-rules for AI assistants). Each person's tasks are in [`plan/`](plan/).
+Each event stores its timestamp and the count of active Premium accounts that would receive it. The Premium page displays the shared history, with pagination and no recipient identities. A singleton database row serialises observations to prevent duplicate events from concurrent requests.
 
-### Project layout
+**No email, push or other notification is actually sent.** Checks run around accepted reports and during status/history requests; there is no independent scheduler. Initial, missing or stale observations establish a baseline rather than inventing earlier events.
 
-```
-app/main.py                    # FastAPI app, startup, /health            (Person 1)
-library/
-  db.py  auth.py  clock.py     # tables, login, app clock                    (Person 1)
-  status.py  trust.py          # status calculation, bad actors, leaderboard (Person 1)
-  core_routes.py               # /api/login, reports, status, comments...    (Person 1)
-  pages.py                     # HTML pages                                  (Person 2)
-  ai.py  payments.py  notify.py
-  integration_routes.py        # /api/summary, checkout, webhook       (Person 3)
-templates/  static/            # frontend                                    (Person 2)
-scripts/replay.py              # replays a busy afternoon for the demo      (Person 1)
-tests/
-plan/                          # one task file per person
+### Consistent scoring and private feedback
+
+Points are awarded **in the same transaction** as a successful contribution. Reports have a ten-minute cooldown; comments have a one-minute cooldown, a 280-character limit, and same-user duplicate rejection for two hours. Failed submissions award no points. Competition ranking handles ties as `1, 1, 3`.
+
+Feedback is stored separately, with a 2,000-character limit and a one-minute cooldown. The `/feedback` page serves an inbox shell; reading submissions requires a separate team password and signed session. Access does not depend on the unverified demo email address.
+
+## Architecture and stack
+
+```mermaid
+flowchart LR
+    Browser[Browser: Jinja pages + vanilla JS] --> App[FastAPI + Uvicorn on Render]
+    App --> DB[(PostgreSQL online / SQLite locally)]
+    App --> AI[OpenRouter: comment summaries]
+    App --> Stripe[Stripe sandbox: hosted Checkout]
+    History[Synthetic occupancy CSV] --> App
+    Stripe -->|Signed webhook| App
 ```
 
----
+| Layer | Implementation |
+|---|---|
+| Backend | Python, FastAPI routers, Uvicorn, Pydantic validation |
+| Persistence | SQLAlchemy Core; PostgreSQL via psycopg online, SQLite locally |
+| Frontend | Jinja2, vanilla JavaScript and CSS; no frontend build step |
+| Live updates | Browser polling: status/ranks every 10 seconds, comments/summary every 30 seconds, forecast every minute while visible |
+| Sessions | Starlette signed cookies; HTTPS-only cookies in production |
+| AI | OpenRouter through the OpenAI SDK; server-side credentials and persisted caches |
+| Payments | Stripe sandbox SDK, Checkout, signed webhook and return confirmation |
+| Deployment | Render web service with an external PostgreSQL database (Neon in our setup) |
+| Tests | pytest, FastAPI TestClient, controlled app clock, provider mocks and regression cases |
 
-## Getting started
+Production startup checks require a strong session secret, an HTTPS public URL, normal clock speed and disabled replay endpoints. Request handling includes origin checks for browser mutations, a 64 KB body limit, parameterised database operations and plain-language JSON errors. The frontend inserts user text with `textContent`.
+
+The database stores accounts, reports, comments, status snapshots, points, payment records, AI caches, feedback and simulated alert events. Tables are created additively on startup. Online persistence comes from PostgreSQL rather than the hosted app's local files.
+
+## Run locally
+
+Clone the repository using an account with access, then create a Python virtual environment:
 
 ```bash
 git clone https://github.com/Conor-Collins1/Hack-UCD-1.git
 cd Hack-UCD-1
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env               # then fill in the keys
-python -m library.cli init-db
-uvicorn app.main:app --reload        # http://127.0.0.1:8000
-pytest
+python -m venv .venv
 ```
 
-Stripe webhooks locally (second terminal):
+Activate it:
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+Copy-Item .env.example .env
+```
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+cp .env.example .env
+```
+
+Install and start:
+
+```bash
+pip install -r requirements.txt
+python -m library.cli init-db
+uvicorn app.main:app --reload
+```
+
+Open **[localhost:8000](http://127.0.0.1:8000/)**. SQLite works without a database key. AI, Checkout and the private feedback inbox need their respective optional settings below.
+
+### Environment settings
+
+Use `.env` locally and Render's environment settings online. **Never commit real credentials or a database connection string.** `.env.example` contains placeholders only.
+
+| Setting | Purpose |
+|---|---|
+| `APP_ENV` | `development` locally; `production` on Render |
+| `SESSION_SECRET` | A random secret of at least 32 characters; signs sessions |
+| `PUBLIC_URL` | Exact app origin: `http://127.0.0.1:8000` locally, `https://hack-ucd-library.onrender.com` for our deployment |
+| `DATABASE_URL` | Leave blank for local SQLite; use the hosted PostgreSQL connection string online |
+| `OPENROUTER_API_KEY` | Enables AI summaries; server-side only |
+| `OPENROUTER_MODEL` | Model selection; defaults to `openrouter/free` |
+| `STRIPE_SECRET_KEY` | Sandbox secret key beginning `sk_test_` |
+| `STRIPE_PRICE_ID` | The sandbox one-time EUR 1.99 **Price ID** (`price_…`), not the Product ID |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret for the configured Stripe webhook endpoint |
+| `FEEDBACK_ADMIN_PASSWORD` | A random password of at least 32 characters for the team's feedback inbox |
+| `DEMO_MODE` / `DEMO_SPEED` | Keep `0` / `1` online; synthetic replay settings for local development only |
+
+For a local webhook listener, use the Stripe CLI in another terminal and put its signing secret in your local environment:
 
 ```bash
 stripe listen --forward-to 127.0.0.1:8000/webhooks/stripe
 ```
 
-Demo run: set `DEMO_MODE=1` and `DEMO_SPEED=60` in `.env` (time runs 60x faster), then
+### Deploy on Render
 
-```bash
-python -m library.cli reset-db --confirm-reset
-uvicorn app.main:app
-python scripts/replay.py            # third terminal
+Connect this GitHub repository as a Python Web Service, using branch `main`:
+
+```text
+Build:        pip install -r requirements.txt
+Start:        uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+Health check: /health
 ```
 
----
+Set the production environment values above, including an external PostgreSQL `DATABASE_URL`. Use one worker for the AI generation lock. Configure Stripe's sandbox webhook to reach `/webhooks/stripe` and listen for `checkout.session.completed`; checkout-return confirmation also verifies purchases directly with Stripe.
 
-## How the logic works
+For current hosting allowances, consult [Render's free-service documentation](https://render.com/docs/free) and [Neon's plans](https://neon.com/pricing). AI availability and limits are separate from app hosting.
 
-### Database tables
-`users`, `reports` (string levels: not_full / busy / full), `comments`, `status_snapshots`, `payments`, `ai_summaries`, `feedback`, `notification_state`, `notification_events`, `notifications_sent`. Full schema: CLAUDE.md.
+## Tests and developer tools
 
-### Status calculation
-- Each report becomes a number: Not full = 0, 80% = 0.8, Full = 1.
-- Use each person's latest report, excluding flagged or zero-trust accounts. Reports can remain as a sparse fallback for up to 45 minutes, but their weight halves every 3 minutes and is multiplied by trust.
-- Once 3 different people report within 5 minutes, use only the 5 newest reports from that period. All older reports stop counting; stored reports are preserved. The last qualifying group's cutoff remains in force as those reports age, preventing old votes from reappearing.
-- With sparse reports, keep hysteresis: switch to Full above 0.9, back down below 0.8. A fresh group of at least 3 reporters overrides that previous state, so old Full snapshots cannot hold the label up.
-- Confidence is medium for 3-4 fresh selected reports, high for 5, and low for sparse fallback data.
-- Confidence label from how many reports came in recently.
+```bash
+python -m pytest -q
+python scripts/generate_history.py --backtest
+```
 
-### Bad-actor detection
-- Compare each report with the consensus at that time, leaving out the reporter's own report.
-- Trust score = (agreed + 1) / (total + 2). New users start at 0.5.
-- Flag users below 0.3 trust after 5+ reports, or who send repeated reports within 10 minutes.
-- Flagged users see the app normally, but their reports carry zero weight.
+**161 tests passed at the time of this README update.** Coverage includes occupancy recency and cutoffs, cooldowns, transactional scoring, tied ranks, API validation, sessions, AI output validation and fallback, sandbox payment verification and idempotency, feedback access, alert transitions, page behaviour and forecast calculations.
 
-### Simulated Premium alerts
-Premium records a getting-busy alert for Not full → ~80% full and a space-opening alert for Full → ~80% full. The Premium page shows persistent shared history. Actual delivery is deferred; no notification service or keys are needed.
+For a synthetic local replay, set `DEMO_MODE=1` and `DEMO_SPEED=60`, start the local app, then run `python scripts/replay.py` in another terminal. Use a disposable database. Production refuses to start with replay mode enabled.
 
-### AI summary (OpenRouter)
-- Reads up to 50 latest visible comments from the past hour. Names and emails are not sent;
-  comment text is sent to OpenRouter, so students should avoid personal details in comments.
-- Fewer than three comments: returns `not_enough` and makes no API call.
-- Uses OPENROUTER_API_KEY in Render; OPENROUTER_MODEL selects the model. If blank or unset,
-  defaults to `openrouter/free` (https://openrouter.ai/openrouter/free), subject to provider limits.
-- Validates 1-5 concise bullet points (180 characters each). Theme metadata is retained internally; the UI shows only the bullet points.
-  Treats comment instructions as untrusted data; identified spam/abuse can be hidden, while normal
-  criticism remains visible. Model moderation and summaries can still make mistakes.
-- Saves summaries in PostgreSQL/SQLite. Reuses them until five new comments arrive, ten minutes
-  pass, the model changes, or source comments expire/disappear from the bounded input window.
-- A 15-second request timeout and one-minute retry cooldown limit failed calls. Invalid JSON,
-  incomplete output, missing credentials, provider errors and timeouts keep the last valid,
-  still-relevant summary with `stale`, or return `error` when none exists.
-- Concurrent requests share one generation per app process; use one Uvicorn worker for this demo.
-  No background job or browser-side API key is required. The page already polls every 30 seconds.
-
-### Leaderboard
-- +5 points for each accepted occupancy report; one report every 10 minutes.
-- +2 points for each accepted comment; one comment per minute. Duplicate text from the same user
-  within two hours is rejected, ignoring case and extra whitespace.
-- Invalid, rejected and flagged-user submissions earn no points. Points are saved in the same
-  transaction as the submission, so a failed save awards nothing.
-- The leaderboard shows the top 10 positive-scoring, unflagged contributors. Ties share ranks
-  (1, 1, 3). Your own rank is shown even when outside the top 10.
-- Your score and position appear on the status, account and leaderboard pages. The leaderboard
-  refreshes every 10 seconds while visible.
-- Participation scoring starts with new submissions; historical content is not backfilled.
-  Monthly reset and top-three premium rewards are future ideas, not active behavior.
-
-### 1-hour forecast (Premium)
-- `GET /api/forecast` (Premium only) predicts occupancy one hour ahead:
-  `forecast = typical score for (weekday, time in 1 hour) + 0.5 × (live score now − typical score now)`.
-  If the library is busier than usual now, it will probably still be busier than usual in an hour.
-- "Typical" comes from 5 weeks of **synthetic** history in `data/occupancy_history.csv`, made by
-  `scripts/generate_history.py` (daily curve, busier Mon–Wed, quiet weekends, rising towards exams,
-  busier/quieter days, random drift). Recent weeks count more. Assumed opening hours:
-  Mon–Fri 08:00–22:00, Sat–Sun 10:00–18:00.
-- With no reports in the last 45 minutes it uses the typical pattern alone; if the library will be
-  closed it says so. Free users see an "Unlock with Premium" card instead.
-- **Backtest** (`python scripts/generate_history.py --backtest`): trained on 4 weeks, tested on the
-  final week (316 one-hour-ahead predictions). Mean absolute error on the 0–1 scale:
-
-  | Method | Perfect live readings | Noisy live readings (sd 0.15) |
-  |---|---|---|
-  | "Same as now" baseline | 0.107 | 0.143 |
-  | Typical pattern only | 0.116 | 0.116 |
-  | Typical + 0.5 × live gap (**used**) | 0.070 | **0.086** |
-  | Typical + 1.0 × live gap | 0.050 | 0.113 |
-
-  With perfect readings, trusting the live gap fully looks best, but real student reports are noisy,
-  and then 0.5 wins. That's why the app uses 0.5.
-- Limitation: the history is synthetic, so this shows the method, not real accuracy. With real
-  reports collected over a few weeks the same code learns the library's actual pattern.
-
-### Stripe (bonus +5 points)
-- Sandbox Checkout Session for a one-time EUR 1.99 purchase (mode=payment).
-- Webhook on `checkout.session.completed` sets `is_premium`; `/api/checkout/confirm` is a backup that asks Stripe directly.
-- Account page shows permanent Premium (premium_until is null).
-- Test card: `4242 4242 4242 4242`, any future expiry, any CVC.
-
----
-
-## Error handling
-
-Every error is returned as JSON, `{"error": "<plain-English message>"}`, with a matching HTTP status,
-and the frontend shows that message next to the action that failed.
-
-| Situation | Response |
+| Path | Responsibility |
 |---|---|
-| Broken JSON or wrong body shape | `400` "Please check your input and try again." |
-| Invalid report level | `400` "level must be one of not_full, busy, full." |
-| Comment empty or over 280 characters | `400` "Comments must be 1-280 characters." |
-| Not logged in | `401` "Log in first." The page prompts the student to sign in again |
-| Form posted from another website | `403` "Please submit from the app website." |
-| Same comment posted twice within 2 hours | `409` "You already posted this update." |
-| Request body over 64 KB | `413` "Request is too large." |
-| Reporting again within 10 minutes / commenting within 1 minute | `429` with `retry_after_seconds`; the page shows a countdown |
-| Database unavailable | `503` "Database unavailable. Please try again later." (details logged, not shown) |
-| Unknown page / wrong HTTP method | `404` / `405` as JSON |
-| Forecast requested without Premium | `403` "The 1-hour forecast is a Premium feature." with `premium_required: true`; the page shows an unlock button |
-| Forecast history file missing or corrupt | `503` "The forecast is temporarily unavailable." (details logged) |
+| `app/main.py` | App startup, middleware, router wiring and health check |
+| `library/db.py`, `auth.py`, `clock.py` | Schema, demo sessions and controllable time |
+| `library/status.py`, `trust.py`, `core_routes.py` | Occupancy, scoring, ranks and contribution APIs |
+| `library/ai.py`, `integration_routes.py` | Summary generation, caching and integration endpoints |
+| `library/payments.py`, `notify.py` | Verified sandbox upgrades and simulated alert events |
+| `library/forecast.py`, `forecast_routes.py` | Premium forecast and access control |
+| `templates/`, `static/` | Server-rendered pages, responsive styling and browser behaviour |
+| `scripts/`, `data/` | Replay tooling and synthetic forecast history |
+| `tests/` | Automated checks and regression coverage |
+| `CLAUDE.md`, `plan/` | Shared development contract and original team plans |
 
-**AI summary.** Fewer than 3 comments returns `not_enough` without calling the AI. Requests time
-out after 15 seconds and fall back to up to three models. Every field of the AI's reply is
-validated; if the call fails or the reply is invalid, the last good summary is shown marked
-"may be out of date" (`stale`), or `error` if there is none, and the app waits a minute before
-trying again. Comments are passed as untrusted data so instructions inside them are ignored.
+FastAPI's interactive API reference is available at `/docs`; the detailed shared contracts are in [CLAUDE.md](CLAUDE.md). The original [team plans](plan/) include superseded tasks; this README describes the current implementation.
 
-**Payments.** Only Stripe sandbox keys are accepted. Before granting Premium the app checks the
-session belongs to the logged-in user, is paid, and matches the EUR 1.99 price. Webhooks must
-have a valid signature, and confirming the same payment twice does not create a duplicate.
-If Stripe is unreachable the student sees "Stripe is unavailable. Please try again shortly." (`502`).
+## Demo scope and next steps
 
-**Startup checks.** In production the app refuses to start without a strong `SESSION_SECRET`
-and an HTTPS `PUBLIC_URL`, or with demo mode switched on.
+This is a working hackathon prototype. Demo login does not verify identity. The live database can contain submitted names, emails, comments and feedback; it is **not exclusively synthetic**. Comments are sent to OpenRouter for summaries, so avoid including personal information in them.
 
-**Tests.** `pytest` covers ordinary, boundary (e.g. 280 vs 281 characters) and failure inputs
-for the API, scoring, AI summary, payments and the forecast (including the backtest).
+Trust weights and flagged-account exclusions are supported, but **automatic report judgement and bad-actor flagging are still TODOs**. Other next steps are verified authentication, real historical occupancy data, actual notification delivery, scheduled alert checks, and automatic leaderboard prize grants.
 
----
-
-## Data
-
-All reports, users and comments in the demo are **synthetic**, generated by `scripts/replay.py`. The forecast history in `data/occupancy_history.csv` is also **synthetic**, generated by `scripts/generate_history.py`. No real student data is stored.
-
----
-
-## Free hosting: Render + Neon
-
-Render hosts the FastAPI app; Neon hosts PostgreSQL. Use their Free plans. Render free app instances
-sleep after 15 idle minutes; the first request can take about a minute. SQLite files on Render are
-lost on restart or redeploy, so set DATABASE_URL to a separate hosted PostgreSQL database.
-Render's own free PostgreSQL expires after 30 days; Neon is the recommended development database.
-
-1. Create a Neon Free project and copy its PostgreSQL connection string into Render's secret settings.
-2. Create a Render Web Service from this GitHub repository, branch main, runtime Python.
-3. Build command: `pip install -r requirements.txt`.
-4. Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
-5. Set APP_ENV=production, SESSION_SECRET to a random value (at least 32 characters),
-   PUBLIC_URL to the exact HTTPS app origin, DATABASE_URL to the Neon URL,
-   DEMO_MODE=0 and DEMO_SPEED=1. Do not put secrets into GitHub or chat.
-6. Set the health check path to /health. Tables are created on startup.
-
-Free allowances can change. See https://render.com/docs/free and https://neon.com/pricing.
-AI calls are a separate service and are not included in free app hosting.
-
-### Premium alert trigger history
-
-The Premium page explains two alerts: Not full to ~80% full (getting busy), and Full to
-~80% full (space opening up). The backend records those transitions in notification_events,
-with UTC time and a count of active Premium accounts that would receive the alert. This is a
-public shared demo log with no recipient identities. No notification is actually sent.
-
-Transitions are checked before/after accepted reports and when status/history is requested.
-A database singleton lock prevents concurrent polls from duplicating events. Initial status,
-missing reports and stale observations establish a baseline without inventing earlier alerts.
-There is no independent scheduler or offline capture while Render is asleep. Stored history
-survives restarts and deploys in the configured database; no new keys or services are needed.
+**[Try Library Status →](https://hack-ucd-library.onrender.com/)**

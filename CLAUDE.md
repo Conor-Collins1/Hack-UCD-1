@@ -245,3 +245,10 @@ pytest
 Demo: set `DEMO_MODE=1` and `DEMO_SPEED=60` in `.env`, run `python -m library.cli reset-db --confirm-reset`, start
 the app, then `python scripts/replay.py` in another terminal.
 Stripe webhooks locally: `stripe listen --forward-to 127.0.0.1:8000/webhooks/stripe`.
+
+## Project showcase documentation (Person 1 request)
+
+Person 1 authorized rewriting README.md to showcase the current project, link prominently to the
+live website, and document implemented technical highlights and setup. Separate implemented
+behaviour from deferred trust judgement, prize grants, real notification delivery and synthetic
+forecast data. This documentation update does not change runtime behaviour or shared contracts.
