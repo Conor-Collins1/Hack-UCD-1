@@ -436,3 +436,72 @@ async function initAccountPage() {
   });
   $('logout').addEventListener('click', async () => { await api('/api/logout', { method: 'POST' }); location.reload(); });
 }
+
+
+function initFeedbackForm() {
+  const form = $('feedback-form');
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = form.querySelector('button');
+    button.disabled = true;
+    try {
+      await api('/api/feedback', { method: 'POST', body: { message: $('feedback-message').value } });
+      form.reset();
+      $('feedback-result').textContent = 'Thanks! Your feedback has been sent to the team.';
+    } catch (e) {
+      $('feedback-result').textContent = e.status === 401 ? 'Please sign in before sending feedback.' : e.message;
+    } finally { button.disabled = false; }
+  });
+}
+
+async function initFeedbackInbox() {
+  let before = null;
+  async function load(append = false) {
+    const data = await api('/api/feedback' + (append && before ? '?before=' + before : ''));
+    if (!append) $('feedback-list').replaceChildren();
+    data.feedback.forEach(row => {
+      const item = document.createElement('li');
+      const meta = document.createElement('p');
+      meta.className = 'body-muted';
+      meta.textContent = row.name + ' · ' + new Date(row.created_at).toLocaleString();
+      const text = document.createElement('p');
+      text.textContent = row.message;
+      text.style.whiteSpace = 'pre-wrap';
+      item.append(meta, text);
+      $('feedback-list').append(item);
+    });
+    before = data.next_before;
+    $('feedback-more').hidden = !before;
+    $('feedback-access').hidden = true;
+    $('feedback-inbox').hidden = false;
+    $('inbox-message').textContent = $('feedback-list').children.length ? '' : 'No feedback yet.';
+  }
+  $('feedback-access').addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = event.target.querySelector('button');
+    button.disabled = true;
+    try {
+      await api('/api/feedback/access', { method: 'POST', body: { password: $('feedback-password').value } });
+      $('feedback-password').value = '';
+      await load();
+    } catch (e) { $('inbox-message').textContent = e.message; }
+    finally { button.disabled = false; }
+  });
+  $('feedback-more').addEventListener('click', async () => {
+    $('feedback-more').disabled = true;
+    try { await load(true); }
+    catch (e) { $('inbox-message').textContent = e.message; }
+    finally { $('feedback-more').disabled = false; }
+  });
+  $('feedback-lock').addEventListener('click', async () => {
+    try {
+      await api('/api/feedback/lock', { method: 'POST' });
+      $('feedback-list').replaceChildren();
+      $('feedback-inbox').hidden = true;
+      $('feedback-access').hidden = false;
+      $('inbox-message').textContent = 'Inbox locked.';
+    } catch (e) { $('inbox-message').textContent = e.message; }
+  });
+  try { await load(); }
+  catch (e) { if (e.status !== 401) $('inbox-message').textContent = e.message; }
+}

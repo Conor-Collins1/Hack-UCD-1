@@ -119,5 +119,16 @@
     </section>
   </div>
 </div>
+<section class="card" aria-labelledby="feedback-title">
+  <p class="eyebrow">Help us improve</p>
+  <h2 id="feedback-title">Share feedback</h2>
+  <p class="body-muted">Found a problem or have an idea? Your feedback is saved privately for our team. Please leave out sensitive information.</p>
+  <form id="feedback-form" class="form">
+    <label for="feedback-message">Your feedback</label>
+    <textarea id="feedback-message" maxlength="2000" required placeholder="What could we improve?"></textarea>
+    <button type="submit">Send feedback</button>
+    <p id="feedback-result" role="status" aria-live="polite"></p>
+  </form>
+</section>
 {% endblock %}
-{% block scripts %}<script>initStatusPage();</script>{% endblock %}
+{% block scripts %}<script>initStatusPage(); initFeedbackForm();</script>{% endblock %}

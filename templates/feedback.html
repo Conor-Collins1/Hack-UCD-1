@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Team feedback · Library Status{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow">Team inbox</p>
+  <h1>User feedback</h1>
+  <form id="feedback-access" class="form">
+    <label for="feedback-password">Team password</label>
+    <input id="feedback-password" type="password" autocomplete="current-password" required>
+    <button type="submit">Unlock feedback</button>
+  </form>
+  <p id="inbox-message" role="status" aria-live="polite"></p>
+  <div id="feedback-inbox" hidden>
+    <button id="feedback-lock">Lock inbox</button>
+    <ul id="feedback-list" class="comment-list"></ul>
+    <button id="feedback-more" hidden>Load older feedback</button>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script>initFeedbackInbox();</script>{% endblock %}

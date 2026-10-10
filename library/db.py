@@ -101,6 +101,15 @@ ai_summaries = Table(
 )
 
 
+feedback = Table(
+    'feedback', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id'), nullable=False),
+    Column('message', String(2000), nullable=False),
+    Column('created_at', DateTime(timezone=True), nullable=False, default=clock.now, index=True),
+)
+
+
 def init_db():
     metadata.create_all(engine)
 
