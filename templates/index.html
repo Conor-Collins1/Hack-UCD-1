@@ -2,9 +2,9 @@
 {% block title %}Is the library full? · Library Status{% endblock %}
 {% block content %}
 <p class="visually-hidden" id="announcer" role="status" aria-live="polite"></p>
-<div class="page-header">
+<div class="hero">
   <h1 class="headline">Is the UCD library full?</h1>
-  <p class="supporting">Live estimate from student reports in the last 45 minutes.</p>
+  <p class="supporting">James Joyce Library · live estimate from student reports in the last 45 minutes.</p>
 </div>
 
 <div class="layout">
@@ -63,6 +63,7 @@
               <span class="report-option__label">Not full</span>
               <span class="report-option__hint">Easy to find a seat</span>
             </span>
+            <svg class="report-option__check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
           </button>
           <button class="report-option" type="button" data-level="busy">
             <span class="report-option__swatch" aria-hidden="true"></span>
@@ -70,6 +71,7 @@
               <span class="report-option__label">~80% full</span>
               <span class="report-option__hint">Seats are getting hard to find</span>
             </span>
+            <svg class="report-option__check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
           </button>
           <button class="report-option" type="button" data-level="full">
             <span class="report-option__swatch" aria-hidden="true"></span>
@@ -77,16 +79,18 @@
               <span class="report-option__label">Full</span>
               <span class="report-option__hint">No free seats</span>
             </span>
+            <svg class="report-option__check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
           </button>
         </div>
       </div>
+      <div class="cooldown" id="cooldown" hidden><div class="cooldown__bar"></div></div>
       <p class="notice" id="report-msg" hidden></p>
     </section>
   </div>
 
   <div class="layout__side">
     <!-- AI summary -->
-    <section class="card" aria-labelledby="summary-heading" id="summary-card">
+    <section class="card card--soft" aria-labelledby="summary-heading" id="summary-card">
       <div class="card__header">
         <h2 id="summary-heading" class="title">What students are saying</h2>
         <span class="tag">AI summary</span>

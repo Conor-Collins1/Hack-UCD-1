@@ -179,14 +179,38 @@ function setSignedIn(user) {
 
 function reportButtons() { return document.querySelectorAll('.report-option'); }
 
+// Restart the cooldown bar's CSS animation so it shrinks over the remaining wait.
+function showCooldownBar(seconds) {
+  const track = $('cooldown');
+  if (!track) return;
+  track.hidden = seconds <= 0;
+  if (seconds <= 0) return;
+  const bar = track.firstElementChild;
+  bar.style.setProperty('--duration', `${seconds}s`);
+  bar.style.animation = 'none';
+  void bar.offsetWidth; // reflow so the animation starts again
+  bar.style.animation = '';
+}
+
+// Shake the options once when a report is rejected. Reduced-motion users get the message only.
+function shakeOptions() {
+  const group = document.querySelector('.report-options');
+  group.classList.remove('is-shaking');
+  void group.offsetWidth;
+  group.classList.add('is-shaking');
+  group.addEventListener('animationend', () => group.classList.remove('is-shaking'), { once: true });
+}
+
 function startCooldown(seconds, message, tone) {
   clearInterval(statusPage.cooldownTimer);
   const notice = $('report-msg');
   let left = Math.max(0, Math.ceil(seconds || 0));
+  showCooldownBar(left);
   const tick = () => {
     if (left <= 0) {
       clearInterval(statusPage.cooldownTimer);
-      reportButtons().forEach(b => { b.disabled = false; b.removeAttribute('aria-pressed'); });
+      reportButtons().forEach(b => { b.disabled = false; b.removeAttribute('aria-pressed'); b.classList.remove('is-sent', 'is-sending'); });
+      showCooldownBar(0);
       if (message) showNotice(notice, `${message} You can report again now.`, tone);
       return;
     }
@@ -195,7 +219,7 @@ function startCooldown(seconds, message, tone) {
     left -= 1;
   };
   tick();
-  if (left > 0) statusPage.cooldownTimer = setInterval(tick, 1000);
+  if (seconds > 0) statusPage.cooldownTimer = setInterval(tick, 1000);
 }
 
 async function loadSession() {
@@ -250,18 +274,22 @@ function initStatusPage() {
   reportButtons().forEach(button => {
     button.addEventListener('click', async () => {
       const notice = $('report-msg');
-      reportButtons().forEach(b => { b.disabled = true; b.removeAttribute('aria-pressed'); });
+      reportButtons().forEach(b => { b.disabled = true; b.removeAttribute('aria-pressed'); b.classList.remove('is-sent', 'is-sending'); });
+      button.classList.add('is-sending');
       button.setAttribute('aria-pressed', 'true');
       showNotice(notice, 'Sending your report…', 'info');
       try {
         const data = await api('/api/reports', { method: 'POST', body: { level: button.dataset.level } });
         renderStatus(data.status);
+        button.classList.replace('is-sending', 'is-sent');
         announce('Thanks, your report is in.');
         const me = await api('/api/me').catch(() => ({ seconds_until_can_report: 0 }));
         if (me.user) setSignedIn(me.user);
         startCooldown(me.seconds_until_can_report, `Thanks, your report is in. +${data.points_awarded || 0} points.`, 'success');
       } catch (e) {
         button.removeAttribute('aria-pressed');
+        button.classList.remove('is-sending');
+        shakeOptions();
         if (e.status === 429) {
           startCooldown(e.data.retry_after_seconds, 'You reported recently.', 'warning');
         } else if (e.status === 401) {
@@ -335,36 +363,90 @@ function scoreText(user) {
 
 // ---- Leaderboard page ----
 
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function plural(n, word) { return `${n} ${word}${n === 1 ? '' : 's'}`; }
+
+function renderPodium(rows, currentUserId) {
+  const slots = [...rows];
+  while (slots.length < 3) slots.push(null);
+  $('podium').replaceChildren(...slots.map((row, index) => {
+    const rank = row ? row.rank : index + 1;
+    const li = el('li', row ? 'spine' : 'spine spine--open');
+    li.dataset.rank = String(rank);
+    li.dataset.you = String(!!row && row.id === currentUserId);
+    li.value = rank;
+    li.append(el('span', 'spine__rank', String(rank)));
+    if (row) {
+      li.append(el('span', 'spine__name', row.name + (row.id === currentUserId ? ' (you)' : '')));
+      const points = el('span', 'spine__points');
+      points.append(el('strong', '', String(row.points)), document.createTextNode(row.points === 1 ? 'point' : 'points'));
+      li.append(points, el('span', 'spine__badge', '1 month Premium free'));
+    } else {
+      li.append(el('span', 'spine__name', 'Open spot'), el('span', 'spine__points', 'Could be you'));
+    }
+    return li;
+  }));
+}
+
+function renderCatalogue(rest, leaderPoints, currentUserId) {
+  listItems($('leaderboard'), rest, (li, row) => {
+    li.value = row.rank;
+    li.dataset.you = String(row.id === currentUserId);
+    const who = el('span', 'catalogue__who');
+    who.append(el('span', 'catalogue__name', row.name + (row.id === currentUserId ? ' (you)' : '')), el('span', 'catalogue__meta', plural(row.reports_total, 'report')));
+    const bar = el('span', 'catalogue__bar');
+    const fill = el('span');
+    fill.style.width = `${leaderPoints ? Math.max(4, Math.round(row.points / leaderPoints * 100)) : 0}%`;
+    bar.append(fill);
+    bar.setAttribute('aria-hidden', 'true');
+    who.append(bar);
+    if (row.rank <= 3) who.append(el('span', 'catalogue__prize', 'Top 3 · 1 month Premium free'));
+    const pts = el('span', 'catalogue__points', String(row.points));
+    pts.append(el('small', '', row.points === 1 ? 'point' : 'points'));
+    const rank = el('span', 'catalogue__rank', String(row.rank));
+    rank.setAttribute('aria-hidden', 'true');   // the <ol> already announces the position
+    li.append(rank, who, pts);
+  });
+}
+
 async function initLeaderboardPage() {
+  let renderedRows = null;
   async function refresh() {
     try {
-      const data = await api('/api/leaderboard');
+      const [data, me] = await Promise.all([
+        api('/api/leaderboard'), api('/api/me').catch(() => null)
+      ]);
+      const current = data.current_user;
+      const rows = data.leaderboard;
       $('leaderboard-error').textContent = '';
-      $('leaderboard-position').textContent = data.current_user
-        ? scoreText(data.current_user) : 'Sign in on the Account page to see your points and rank.';
-      $('leaderboard-meta').textContent = `Top ${data.leaderboard.length} of ${data.total_contributors} contributors · refreshes every 10 seconds`;
-      listItems($('leaderboard'), data.leaderboard, (li, row) => {
-        const isYou = data.current_user && data.current_user.id === row.id;
-        li.dataset.you = String(!!isYou);
-        li.dataset.prize = String(row.rank >= 1 && row.rank <= 3);
-        li.value = row.rank;
-        const name = document.createElement('strong');
-        name.textContent = `#${row.rank} ${row.name}${isYou ? ' (you)' : ''}`;
-        const points = document.createElement('span');
-        points.textContent = `${row.points} points`;
-        const details = document.createElement('div');
-        details.className = 'ranking-details';
-        details.append(points);
-        if (row.rank >= 1 && row.rank <= 3) {
-          const prize = document.createElement('span');
-          prize.className = 'ranking-prize';
-          prize.textContent = 'Top 3 · 1 month Premium free';
-          details.append(prize);
-        }
-        li.append(name, details);
-      });
-      if (!data.leaderboard.length) $('leaderboard').textContent = 'No points yet. Be the first to contribute!';
-    } catch (e) { $('leaderboard-error').textContent = 'Could not refresh the leaderboard. Retrying automatically.'; }
+      $('leaderboard-position').textContent = current ? scoreText(current) : 'Sign in to see your points and rank.';
+      $('leaderboard-meta').textContent = `Top ${rows.length} of ${data.total_contributors} contributors · refreshes every 10 seconds`;
+      $('you-signed-in').hidden = !current;
+      $('you-signed-out').hidden = !!current;
+      if (current) {
+        $('you-points').textContent = String(current.points);
+        $('you-rank').textContent = current.rank ? '#' + current.rank : 'Unranked';
+        $('you-plan').textContent = me ? (me.user.is_premium ? 'Premium' : 'Free') : 'Unavailable';
+      }
+      const signature = JSON.stringify([rows, current && current.id]);
+      if (signature !== renderedRows) {
+        renderPodium(rows.slice(0, 3), current && current.id);
+        renderCatalogue(rows.slice(3), rows.length ? rows[0].points : 0, current && current.id);
+        renderedRows = signature;
+      }
+      $('podium-empty').hidden = rows.length > 0;
+      $('podium-empty').textContent = 'No points yet. Be the first to contribute!';
+      $('rest-empty').hidden = rows.length > 3;
+      $('rest-empty').textContent = 'More contributors will appear here as they earn points.';
+    } catch (e) {
+      $('leaderboard-error').textContent = 'Could not refresh the leaderboard. Retrying automatically.';
+    }
   }
   await refresh();
   setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 10000);

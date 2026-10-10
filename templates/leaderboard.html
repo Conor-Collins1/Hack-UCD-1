@@ -1,20 +1,57 @@
 {% extends "base.html" %}
 {% block title %}Leaderboard · Library Status{% endblock %}
 {% block content %}
-<section class="card">
-  <p class="eyebrow">Every update helps</p>
-  <h1>Community leaderboard</h1>
-  <aside class="leaderboard-prize" aria-labelledby="prize-title">
-    <p class="eyebrow">Top 3 reward</p>
-    <h2 id="prize-title">Win a month of Premium free</h2>
-    <p>The top 3 people on the leaderboard will each win one month of Premium free. Keep contributing to climb the ranks!</p>
-  </aside>
-  <p class="body-muted">Earn 5 points for each accepted library report and 2 for each new comment.</p>
-  <p class="body-muted">Reports: once every 10 minutes. Comments: once a minute. Duplicate comments within two hours earn no points. Equal scores share a rank.</p>
-  <p id="leaderboard-position" class="notice" role="status">Loading your position…</p>
-  <p id="leaderboard-meta" class="body-muted"></p>
-  <ol id="leaderboard" class="community-ranking"><li class="body-muted">Loading…</li></ol>
-  <p id="leaderboard-error" role="status"></p>
+<!-- "The Stacks": the top 3 stand on a shelf as book spines; everyone else is a catalogue card. -->
+<section class="stacks" aria-labelledby="lb-heading">
+  <div class="stacks__intro">
+    <p class="stacks__eyebrow" id="lb-period">Every update helps</p>
+    <h1 class="stacks__title" id="lb-heading">Community leaderboard</h1>
+    <p class="stacks__lede">Earn points for accepted reports and new comments.
+      The top 3 people will each win a <strong>free month of Premium</strong>.</p>
+    <p class="stacks__reset" id="leaderboard-meta"></p>
+    <p id="leaderboard-error" role="status"></p>
+  </div>
+
+  <ol class="shelf" id="podium" aria-label="Top 3"></ol>
+  <div class="shelf__plank" aria-hidden="true"></div>
+  <p class="stacks__empty" id="podium-empty" hidden></p>
 </section>
+
+
+
+<div class="lb-layout">
+  <section class="catalogue" aria-labelledby="rest-heading">
+    <h2 class="title" id="rest-heading">The rest of the shelf</h2>
+    <ol class="catalogue__list" id="leaderboard" start="4"></ol>
+    <p class="catalogue__empty" id="rest-empty" hidden></p>
+  </section>
+
+  <aside class="lb-side">
+    <section class="panel panel--you" aria-labelledby="you-heading">
+      <h2 class="title" id="you-heading">Your standing</h2>
+      <p id="leaderboard-position" class="notice" role="status"></p>
+      <div id="you-signed-in" hidden>
+        <p class="you__points"><span id="you-points">0</span> <span class="you__unit">points</span></p>
+        <dl class="you__facts">
+          <div><dt>Your rank</dt><dd id="you-rank">–</dd></div>
+          <div><dt>Plan</dt><dd id="you-plan">–</dd></div>
+        </dl>
+      </div>
+      <p class="body-muted" id="you-signed-out" hidden>
+        <a href="/">Sign in on the Status page</a> and report what you see to start earning points.
+      </p>
+    </section>
+
+    <section class="panel panel--rules" aria-labelledby="rules-heading">
+      <h2 class="title" id="rules-heading">How to earn points</h2>
+      <ul class="rules">
+        <li><span class="rules__pts">+5</span><span>Submit an accepted library report. You can report once every 10 minutes.</span></li>
+        <li><span class="rules__pts rules__pts--bonus">+2</span><span>Post a new comment, once a minute. Duplicate comments within two hours earn no points.</span></li>
+        <li><span class="rules__pts rules__pts--zero">0</span><span>Accounts that keep giving false reports are flagged and earn nothing.</span></li>
+      </ul>
+      <p class="body-muted">Equal scores share a rank. Scores refresh every 10 seconds.</p>
+    </section>
+  </aside>
+</div>
 {% endblock %}
 {% block scripts %}<script>initLeaderboardPage();</script>{% endblock %}
